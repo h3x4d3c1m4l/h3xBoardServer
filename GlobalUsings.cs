@@ -1,0 +1,10 @@
+global using System.Text.Json;
+global using System.Text.Json.Nodes;
+global using LinqToDB;
+global using LinqToDB.Async;
+global using LinqToDB.Mapping;
+global using H3xBoardServer.Data;
+global using H3xBoardServer.Data.Entities;
+global using H3xBoardServer.Rpc;
+global using H3xBoardServer.Rpc.Dtos;
+global using H3xBoardServer.Services;

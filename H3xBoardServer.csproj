@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>H3xBoardServer</RootNamespace>
+    <AssemblyName>H3xBoardServer</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- JSON-RPC over WebSockets -->
+    <PackageReference Include="StreamJsonRpc" Version="2.*" />
+
+    <!-- Database access -->
+    <PackageReference Include="linq2db" Version="6.*" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.*" />
+
+    <!-- Migrations -->
+    <PackageReference Include="FluentMigrator" Version="8.*" />
+    <PackageReference Include="FluentMigrator.Runner" Version="8.*" />
+    <PackageReference Include="FluentMigrator.Runner.SQLite" Version="8.*" />
+
+    <!-- Auth -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.*" />
+
+    <!-- Password hashing -->
+    <PackageReference Include="BCrypt.Net-Next" Version="4.*" />
+  </ItemGroup>
+
+</Project>

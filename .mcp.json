@@ -1,0 +1,12 @@
+{
+	"mcpServers": {
+		"dotnet-mcp": {
+			"type": "stdio",
+			"command": "dnx",
+			"args": [
+				"Community.Mcp.DotNet@1.*",
+				"--yes"
+			]
+		}
+	}
+}
