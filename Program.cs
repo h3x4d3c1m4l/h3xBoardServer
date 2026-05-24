@@ -46,8 +46,8 @@ builder.Services.AddFluentMigratorCore()
 builder.Services.AddScoped<RpcContext>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<BoardService>();
-builder.Services.AddScoped<AuthRpc>();
-builder.Services.AddScoped<BoardsRpc>();
+builder.Services.AddScoped<AuthRpcV1>();
+builder.Services.AddScoped<BoardsRpcV1>();
 
 builder.Services.AddCors(opts =>
     opts.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
@@ -67,8 +67,8 @@ app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSecond
 // ── Health check ─────────────────────────────────────────────────────────────
 app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
 
-// ── WebSocket / JSON-RPC endpoint ─────────────────────────────────────────────
-app.Map("/ws", async (HttpContext httpContext, IServiceProvider services, ILogger<Program> logger) =>
+// ── WebSocket / JSON-RPC endpoint — v1 ───────────────────────────────────────
+app.Map("/ws/v1", async (HttpContext httpContext, IServiceProvider services, ILogger<Program> logger) =>
 {
     if (!httpContext.WebSockets.IsWebSocketRequest)
     {
@@ -114,8 +114,8 @@ app.Map("/ws", async (HttpContext httpContext, IServiceProvider services, ILogge
     var handler = new WebSocketMessageHandler(webSocket, formatter);
 
     using var jsonRpc = new JsonRpc(handler);
-    jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<AuthRpc>());
-    jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<BoardsRpc>());
+    jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<AuthRpcV1>());
+    jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<BoardsRpcV1>());
     jsonRpc.StartListening();
 
     try

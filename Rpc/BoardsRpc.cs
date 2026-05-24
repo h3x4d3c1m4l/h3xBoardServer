@@ -3,15 +3,15 @@ using StreamJsonRpc;
 namespace H3xBoardServer.Rpc;
 
 /// <summary>
-/// JSON-RPC methods for board CRUD. All methods require authentication.
+/// JSON-RPC methods for board CRUD — v1. All methods require authentication.
 /// </summary>
-public class BoardsRpc(BoardService boardService, RpcContext context)
+public class BoardsRpcV1(BoardService boardService, RpcContext context)
 {
     /// <summary>
     /// Returns lightweight summaries of all boards owned by the authenticated user,
     /// ordered by most recently updated.
     /// </summary>
-    [JsonRpcMethod("boards.list")]
+    [JsonRpcMethod("boards.v1.list")]
     public Task<List<BoardSummary>> List()
     {
         context.RequireAuthentication();
@@ -21,7 +21,7 @@ public class BoardsRpc(BoardService boardService, RpcContext context)
     /// <summary>
     /// Returns a single board including its full data blob.
     /// </summary>
-    [JsonRpcMethod("boards.get")]
+    [JsonRpcMethod("boards.v1.get")]
     public Task<BoardDto> Get(string id)
     {
         context.RequireAuthentication();
@@ -31,7 +31,7 @@ public class BoardsRpc(BoardService boardService, RpcContext context)
     /// <summary>
     /// Creates a new board. Pass an empty data object {} if no state yet.
     /// </summary>
-    [JsonRpcMethod("boards.create")]
+    [JsonRpcMethod("boards.v1.create")]
     public Task<BoardDto> Create(CreateBoardRequest request)
     {
         context.RequireAuthentication();
@@ -42,7 +42,7 @@ public class BoardsRpc(BoardService boardService, RpcContext context)
     /// Partial update — only fields present in the request are changed.
     /// Send the full board data blob when saving drawing state.
     /// </summary>
-    [JsonRpcMethod("boards.update")]
+    [JsonRpcMethod("boards.v1.update")]
     public Task<BoardDto> Update(UpdateBoardRequest request)
     {
         context.RequireAuthentication();
@@ -52,7 +52,7 @@ public class BoardsRpc(BoardService boardService, RpcContext context)
     /// <summary>
     /// Permanently deletes a board. There is no soft-delete or undo.
     /// </summary>
-    [JsonRpcMethod("boards.delete")]
+    [JsonRpcMethod("boards.v1.delete")]
     public Task Delete(string id)
     {
         context.RequireAuthentication();
