@@ -33,7 +33,7 @@ Migrations run automatically at startup via `IMigrationRunner.MigrateUp()`.
 
 **Per-connection scope** — Each WebSocket connection gets its own `IServiceScope` (created with `CreateAsyncScope` in `Program.cs`). All scoped services — `RpcContext`, `AuthRpcV1`, `BoardsRpcV1`, `AuthService`, `BoardService` — live inside that scope and are disposed when the connection closes.
 
-**`RpcContext`** (`Rpc/RpcContext.cs`) — Mutable per-connection auth state. Both RPC service classes and both application services share the same `RpcContext` instance within a connection's scope. After `auth.v1.login` succeeds, `RpcContext.IsAuthenticated` becomes true for the lifetime of the connection. `RequireAuthentication()` throws `LocalRpcException(4001)` if the context is not yet authenticated.
+**`RpcContext`** (`Rpc/RpcContext.cs`) — Mutable per-connection auth state. Both RPC service classes and both application services share the same `RpcContext` instance within a connection's scope. After `auth.v1.login` succeeds, `RpcContext.IsAuthenticated` becomes true and `RpcContext.CurrentReconnectToken` holds the session's active token for the lifetime of the connection. `RequireAuthentication()` throws `LocalRpcException(4001)` if the context is not yet authenticated.
 
 **`H3xBoardDbFactory`** — Registered as singleton; each async operation calls `dbFactory.Create()` and disposes immediately with `await using`. This is intentional: `linq2db DataConnection` is not thread-safe and JSON-RPC allows concurrent in-flight calls on one connection.
 
@@ -60,6 +60,6 @@ Wire method names follow `service.vN.action`. C# class names follow `*RpcVN`. Mu
 
 Uncomment the matching `case` blocks in `Program.cs` (two switch expressions — one for linq2db `DataOptions`, one for FluentMigrator runner), add the corresponding NuGet packages (`linq2db.*` and `FluentMigrator.Runner.*`), and set `Database:Provider` in config.
 
-### JWT configuration
+### Auth configuration
 
-`Jwt:SecretKey` in `appsettings.json` must be at least 32 characters. Generate with `openssl rand -base64 32`. Access tokens default to 60 min; refresh tokens to 30 days. Both values are configurable.
+`Auth:ReconnectTokenExpiryDays` in `appsettings.json` controls how long a reconnect token stays valid (default: 30 days). No secret key is required — auth is password-based (BCrypt) + random reconnect tokens stored in the `reconnect_tokens` table. There are no JWTs.

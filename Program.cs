@@ -86,23 +86,6 @@ app.Map("/ws/v1", async (HttpContext httpContext, IServiceProvider services, ILo
 
     var context = sp.GetRequiredService<RpcContext>();
 
-    // Pre-authenticate if the client provides a JWT in the query string.
-    // This lets already-authenticated clients skip the auth.login roundtrip.
-    if (httpContext.Request.Query.TryGetValue("token", out var tokenValues))
-    {
-        try
-        {
-            var authService = sp.GetRequiredService<AuthService>();
-            await authService.AuthenticateFromTokenAsync(tokenValues.ToString(), context);
-            logger.LogInformation("Pre-authenticated user {User} via token", context.Username);
-        }
-        catch (Exception ex)
-        {
-            // Non-fatal — client can still authenticate via auth.login
-            logger.LogWarning("Token pre-authentication failed: {Message}", ex.Message);
-        }
-    }
-
     var jsonOptions = new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

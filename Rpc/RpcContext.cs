@@ -6,19 +6,22 @@ namespace H3xBoardServer.Rpc;
 public class RpcContext
 {
     public int? UserId { get; private set; }
-    public string? Username { get; private set; }
+    public string? Email { get; private set; }
+    public string? CurrentReconnectToken { get; private set; }
     public bool IsAuthenticated => UserId.HasValue;
 
-    public void SetAuthenticated(int userId, string username)
+    public void SetAuthenticated(int userId, string email, string reconnectToken)
     {
         UserId = userId;
-        Username = username;
+        Email = email;
+        CurrentReconnectToken = reconnectToken;
     }
 
     public void Clear()
     {
         UserId = null;
-        Username = null;
+        Email = null;
+        CurrentReconnectToken = null;
     }
 
     public void RequireAuthentication()

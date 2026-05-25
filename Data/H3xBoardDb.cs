@@ -11,7 +11,7 @@ public class H3xBoardDb(DataOptions options) : LinqToDB.Data.DataConnection(opti
 {
     public ITable<UserEntity> Users => this.GetTable<UserEntity>();
     public ITable<BoardEntity> Boards => this.GetTable<BoardEntity>();
-    public ITable<RefreshTokenEntity> RefreshTokens => this.GetTable<RefreshTokenEntity>();
+    public ITable<ReconnectTokenEntity> ReconnectTokens => this.GetTable<ReconnectTokenEntity>();
 }
 
 /// <summary>

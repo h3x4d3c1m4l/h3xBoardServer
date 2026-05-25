@@ -1,27 +1,15 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 
 namespace H3xBoardServer.Services;
 
 public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration config)
 {
-    private readonly string _secretKey = config["Jwt:SecretKey"]
-        ?? throw new InvalidOperationException("Jwt:SecretKey is not configured");
-    private readonly string _issuer = config["Jwt:Issuer"] ?? "h3xboard-server";
-    private readonly string _audience = config["Jwt:Audience"] ?? "h3xboard-client";
-    private readonly int _accessTokenExpiryMinutes =
-        int.TryParse(config["Jwt:AccessTokenExpiryMinutes"], out var m) ? m : 60;
-    private readonly int _refreshTokenExpiryDays =
-        int.TryParse(config["Jwt:RefreshTokenExpiryDays"], out var d) ? d : 30;
+    private readonly int _reconnectTokenExpiryDays =
+        int.TryParse(config["Auth:ReconnectTokenExpiryDays"], out var d) ? d : 30;
 
-    public async Task<LoginResult> RegisterAsync(RegisterRequest request)
+    public async Task<LoginResult> RegisterAsync(RegisterRequest request, RpcContext context)
     {
-        if (string.IsNullOrWhiteSpace(request.Username))
-            throw RpcErrors.Validation("Username is required");
         if (string.IsNullOrWhiteSpace(request.Email))
             throw RpcErrors.Validation("Email is required");
         if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
@@ -29,20 +17,16 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration config)
 
         await using var db = dbFactory.Create();
 
-        var existingUser = await db.Users
-            .Where(u => u.Username == request.Username || u.Email == request.Email)
-            .Take(1).AsAsyncEnumerable().FirstOrDefaultAsync();
+        var exists = await db.Users
+            .Where(u => u.Email == request.Email)
+            .Take(1).AsAsyncEnumerable().AnyAsync();
 
-        if (existingUser != null)
-        {
-            var field = existingUser.Username == request.Username ? "Username" : "Email";
-            throw RpcErrors.Conflict($"{field} is already taken");
-        }
+        if (exists)
+            throw RpcErrors.Conflict("Email is already registered");
 
         var now = DateTime.UtcNow;
         var user = new UserEntity
         {
-            Username = request.Username,
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, workFactor: 12),
             CreatedAt = now,
@@ -50,166 +34,92 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration config)
         };
 
         var userId = await db.InsertWithInt32IdentityAsync(user);
+        var reconnectToken = await IssueReconnectTokenAsync(userId);
 
-        return await IssueTokensAsync(userId, request.Username);
+        context.SetAuthenticated(userId, request.Email, reconnectToken);
+
+        return new LoginResult(reconnectToken, userId, request.Email);
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequest request, RpcContext context)
     {
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             throw RpcErrors.InvalidCredentials();
 
         await using var db = dbFactory.Create();
 
         var user = await db.Users
-            .Where(u => u.Username == request.Username)
+            .Where(u => u.Email == request.Email)
             .Take(1).AsAsyncEnumerable().FirstOrDefaultAsync();
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw RpcErrors.InvalidCredentials();
 
-        context.SetAuthenticated(user.Id, user.Username);
+        var reconnectToken = await IssueReconnectTokenAsync(user.Id);
 
-        return await IssueTokensAsync(user.Id, user.Username);
+        context.SetAuthenticated(user.Id, user.Email, reconnectToken);
+
+        return new LoginResult(reconnectToken, user.Id, user.Email);
     }
 
-    public async Task<TokenResult> RefreshTokenAsync(RefreshTokenRequest request, RpcContext context)
+    public async Task<ReconnectResult> ReconnectAsync(ReconnectRequest request, RpcContext context)
     {
-        if (string.IsNullOrWhiteSpace(request.RefreshToken))
-            throw RpcErrors.Validation("Refresh token is required");
+        if (string.IsNullOrWhiteSpace(request.ReconnectToken))
+            throw RpcErrors.Validation("Reconnect token is required");
 
         await using var db = dbFactory.Create();
 
-        var tokenEntity = await db.RefreshTokens
-            .Where(t => t.Token == request.RefreshToken && !t.IsRevoked)
+        var tokenEntity = await db.ReconnectTokens
+            .Where(t => t.Token == request.ReconnectToken && !t.IsRevoked)
             .Take(1).AsAsyncEnumerable().FirstOrDefaultAsync();
 
         if (tokenEntity == null || tokenEntity.ExpiresAt <= DateTime.UtcNow)
-            throw RpcErrors.Unauthenticated("Refresh token is invalid or expired");
+            throw RpcErrors.Unauthenticated("Reconnect token is invalid or expired");
 
-        var user = await db.Users.Where(u => u.Id == tokenEntity.UserId).Take(1).AsAsyncEnumerable().FirstOrDefaultAsync()
+        var user = await db.Users
+            .Where(u => u.Id == tokenEntity.UserId)
+            .Take(1).AsAsyncEnumerable().FirstOrDefaultAsync()
             ?? throw RpcErrors.NotFound("User not found");
 
-        // Revoke the used refresh token (rotation)
+        // Revoke the used token (rotation — each token is single-use)
         tokenEntity.IsRevoked = true;
         await db.UpdateAsync(tokenEntity);
 
-        // Issue new tokens and update context
-        context.SetAuthenticated(user.Id, user.Username);
-        var result = await IssueTokensAsync(user.Id, user.Username);
+        var newToken = await IssueReconnectTokenAsync(user.Id);
 
-        return new TokenResult(result.AccessToken, result.AccessTokenExpiresInSeconds);
+        context.SetAuthenticated(user.Id, user.Email, newToken);
+
+        return new ReconnectResult(newToken);
     }
 
-    public async Task LogoutAsync(int userId)
+    public async Task LogoutAsync(string reconnectToken)
     {
         await using var db = dbFactory.Create();
-        await db.RefreshTokens
-            .Where(t => t.UserId == userId && !t.IsRevoked)
+        await db.ReconnectTokens
+            .Where(t => t.Token == reconnectToken)
             .Set(t => t.IsRevoked, true)
             .UpdateAsync();
     }
 
-    /// <summary>
-    /// Validates a JWT and sets authentication state on the context.
-    /// Called when a WebSocket connection provides a token in the query string.
-    /// Throws if the token is invalid or expired.
-    /// </summary>
-    public async Task AuthenticateFromTokenAsync(string token, RpcContext context)
+    private async Task<string> IssueReconnectTokenAsync(int userId)
     {
-        var (userId, username) = ValidateAccessToken(token);
-
-        // Confirm user still exists
-        await using var db = dbFactory.Create();
-        var exists = await db.Users.Where(u => u.Id == userId).AsAsyncEnumerable().AnyAsync();
-        if (!exists)
-            throw RpcErrors.Unauthenticated("User no longer exists");
-
-        context.SetAuthenticated(userId, username);
-    }
-
-    private async Task<LoginResult> IssueTokensAsync(int userId, string username)
-    {
-        var accessToken = GenerateAccessToken(userId, username);
-        var refreshToken = GenerateRefreshToken();
+        var token = GenerateToken();
         var now = DateTime.UtcNow;
 
         await using var db = dbFactory.Create();
-        await db.InsertAsync(new RefreshTokenEntity
+        await db.InsertAsync(new ReconnectTokenEntity
         {
             UserId = userId,
-            Token = refreshToken,
-            ExpiresAt = now.AddDays(_refreshTokenExpiryDays),
+            Token = token,
+            ExpiresAt = now.AddDays(_reconnectTokenExpiryDays),
             CreatedAt = now,
             IsRevoked = false,
         });
 
-        return new LoginResult(
-            accessToken,
-            refreshToken,
-            _accessTokenExpiryMinutes * 60,
-            userId,
-            username);
+        return token;
     }
 
-    private string GenerateAccessToken(int userId, string username)
-    {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new Claim(JwtRegisteredClaimNames.UniqueName, username),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
-
-        var token = new JwtSecurityToken(
-            issuer: _issuer,
-            audience: _audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_accessTokenExpiryMinutes),
-            signingCredentials: credentials);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private (int userId, string username) ValidateAccessToken(string token)
-    {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
-
-        var parameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = key,
-            ValidateIssuer = true,
-            ValidIssuer = _issuer,
-            ValidateAudience = true,
-            ValidAudience = _audience,
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero,
-        };
-
-        var handler = new JwtSecurityTokenHandler();
-        ClaimsPrincipal principal;
-        try
-        {
-            principal = handler.ValidateToken(token, parameters, out _);
-        }
-        catch (Exception ex)
-        {
-            throw RpcErrors.Unauthenticated($"Invalid token: {ex.Message}");
-        }
-
-        var userIdClaim = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
-            ?? throw RpcErrors.Unauthenticated("Token missing sub claim");
-        var username = principal.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value
-            ?? throw RpcErrors.Unauthenticated("Token missing unique_name claim");
-
-        return (int.Parse(userIdClaim), username);
-    }
-
-    private static string GenerateRefreshToken()
+    private static string GenerateToken()
     {
         var bytes = new byte[64];
         RandomNumberGenerator.Fill(bytes);

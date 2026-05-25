@@ -7,9 +7,6 @@ public class UserEntity
     [Column("id")]
     public int Id { get; set; }
 
-    [Column("username"), NotNull]
-    public string Username { get; set; } = null!;
-
     [Column("email"), NotNull]
     public string Email { get; set; } = null!;
 
