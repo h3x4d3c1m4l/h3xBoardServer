@@ -5,7 +5,7 @@ ASP.NET Core 10 backend for [h3xBoard](https://github.com/h3x4d3c1m4l/h3xBoard) 
 ## Tech stack
 
 | Concern | Library |
-|---|---|
+| --- | --- |
 | Transport | ASP.NET Core WebSockets |
 | RPC | StreamJsonRpc (JSON-RPC 2.0) |
 | ORM | linq2db |
@@ -19,7 +19,6 @@ ASP.NET Core 10 backend for [h3xBoard](https://github.com/h3x4d3c1m4l/h3xBoard) 
 erDiagram
     users {
         int     id           PK
-        string  username     UK
         string  email        UK
         string  password_hash
         string  created_at
@@ -35,7 +34,7 @@ erDiagram
         string  updated_at
     }
 
-    refresh_tokens {
+    reconnect_tokens {
         int     id           PK
         int     user_id      FK
         string  token        UK
@@ -45,7 +44,7 @@ erDiagram
     }
 
     users ||--o{ boards          : owns
-    users ||--o{ refresh_tokens  : has
+    users ||--o{ reconnect_tokens  : has
 ```
 
 ## Documentation

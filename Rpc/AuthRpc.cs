@@ -10,42 +10,42 @@ public class AuthRpcV1(AuthService authService, RpcContext context)
 {
     [JsonRpcMethod("auth.v1.register")]
     public Task<LoginResult> Register(RegisterRequest request)
-        => authService.RegisterAsync(request);
+        => authService.RegisterAsync(request, context);
 
     /// <summary>
     /// Logs in and marks the current WebSocket connection as authenticated.
-    /// Returns JWT tokens the client should persist for future reconnections.
+    /// Returns a reconnect token the client should persist for future reconnections.
     /// </summary>
     [JsonRpcMethod("auth.v1.login")]
     public Task<LoginResult> Login(LoginRequest request)
         => authService.LoginAsync(request, context);
 
     /// <summary>
-    /// Exchanges a refresh token for a new access token (token rotation — old refresh token is revoked).
+    /// Exchanges a reconnect token for a new one (rotation — old token is revoked).
+    /// Also re-authenticates the current connection.
     /// </summary>
-    [JsonRpcMethod("auth.v1.refreshToken")]
-    public Task<TokenResult> RefreshToken(RefreshTokenRequest request)
-        => authService.RefreshTokenAsync(request, context);
+    [JsonRpcMethod("auth.v1.reconnect")]
+    public Task<ReconnectResult> Reconnect(ReconnectRequest request)
+        => authService.ReconnectAsync(request, context);
 
     /// <summary>
-    /// Revokes all refresh tokens for the authenticated user.
+    /// Revokes the current session's reconnect token. Other sessions are unaffected.
     /// </summary>
     [JsonRpcMethod("auth.v1.logout")]
     public async Task Logout()
     {
         context.RequireAuthentication();
-        await authService.LogoutAsync(context.UserId!.Value);
+        await authService.LogoutAsync(context.CurrentReconnectToken!);
         context.Clear();
     }
 
     /// <summary>
-    /// Returns the authenticated user's id and username, or throws if not authenticated.
-    /// Useful as a ping/whoami check.
+    /// Returns the authenticated user's id and email, or throws if not authenticated.
     /// </summary>
     [JsonRpcMethod("auth.v1.whoami")]
     public object Whoami()
     {
         context.RequireAuthentication();
-        return new { userId = context.UserId, username = context.Username };
+        return new { userId = context.UserId, email = context.Email };
     }
 }

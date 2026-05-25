@@ -1,18 +1,14 @@
 namespace H3xBoardServer.Rpc.Dtos;
 
-public record RegisterRequest(string Username, string Email, string Password);
+public record RegisterRequest(string Email, string Password);
 
-public record LoginRequest(string Username, string Password);
+public record LoginRequest(string Email, string Password);
 
 public record LoginResult(
-    string AccessToken,
-    string RefreshToken,
-    int AccessTokenExpiresInSeconds,
+    string ReconnectToken,
     int UserId,
-    string Username);
+    string Email);
 
-public record RefreshTokenRequest(string RefreshToken);
+public record ReconnectRequest(string ReconnectToken);
 
-public record TokenResult(
-    string AccessToken,
-    int AccessTokenExpiresInSeconds);
+public record ReconnectResult(string ReconnectToken);
