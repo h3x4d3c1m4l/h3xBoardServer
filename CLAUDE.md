@@ -71,4 +71,6 @@ Uncomment the matching `case` blocks in `Program.cs` (two switch expressions —
 
 ### Auth configuration
 
-`Auth:SessionIdleTimeoutDays` in `appsettings.json` controls how long a session stays valid (default: 30 days). `Cors:AllowedOrigins` is an array of allowed origins — must be explicit (no wildcards) because `AllowCredentials()` is required for session cookies. In development, configure origins in `appsettings.Development.json`.
+`Auth:SessionIdleTimeoutDays` in `appsettings.json` controls how long a session stays valid (default: 30 days). `Auth:AllowRegistration` (default: `true`) gates new sign-ups — when `false`, `AuthService.RegisterAsync` throws `AuthException(403)` and the unauthenticated `GET /api/v1/server/info` endpoint reports `registrationAllowed: false`. `Cors:AllowedOrigins` is an array of allowed origins — must be explicit (no wildcards) because `AllowCredentials()` is required for session cookies. In development, configure origins in `appsettings.Development.json`.
+
+`/api/v1/server/info` (mapped in `Rest/ServerEndpoints.cs`) returns the unauthenticated `ServerInfo` capabilities object, designed to be extended over time. Both it and the registration guard read `Auth:AllowRegistration` directly from config, so the flag has a single source of truth.

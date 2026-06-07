@@ -10,7 +10,7 @@ ASP.NET Core 10 backend for [h3xBoard](https://github.com/h3x4d3c1m4l/h3xBoard) 
 | RPC | StreamJsonRpc (JSON-RPC 2.0) |
 | ORM | linq2db |
 | Migrations | FluentMigrator |
-| Auth | JWT HS256 + BCrypt |
+| Auth | ASP.NET Core sessions + BCrypt |
 | Database | SQLite (MySQL / PostgreSQL ready) |
 
 ## Database schema
@@ -34,17 +34,7 @@ erDiagram
         string  updated_at
     }
 
-    reconnect_tokens {
-        int     id           PK
-        string  user_id      FK
-        string  token        UK
-        string  expires_at
-        string  created_at
-        bool    is_revoked
-    }
-
-    users ||--o{ boards          : owns
-    users ||--o{ reconnect_tokens  : has
+    users ||--o{ boards : owns
 ```
 
 ## Documentation
@@ -59,25 +49,19 @@ Additional docs are in the [docs/](docs/) folder:
 
 ## Getting started
 
-1. Generate a secret key:
-
-   ```sh
-   openssl rand -base64 32
-   ```
-
-   Add it to `appsettings.Development.json`:
-
-   ```json
-   { "Jwt": { "SecretKey": "<generated-key>" } }
-   ```
-
-2. Run the server:
+1. Run the server:
 
    ```sh
    dotnet run --environment Development
    ```
 
-   This uses `h3xboard-dev.db`. Tables are created automatically on first start via FluentMigrator.
+   This uses `h3xboard-dev.db`. Tables are created automatically on first start via FluentMigrator. No secret key is required — authentication uses ASP.NET Core sessions backed by an HTTP-only cookie.
+
+2. Add your client's origin to `Cors:AllowedOrigins` in `appsettings.Development.json` so the browser will send the session cookie cross-origin (wildcards are not allowed because session cookies require `AllowCredentials()`):
+
+   ```json
+   { "Cors": { "AllowedOrigins": ["http://localhost:8080"] } }
+   ```
 
 For production, configure `appsettings.Production.json`:
 
@@ -87,12 +71,14 @@ For production, configure `appsettings.Production.json`:
     "Provider": "SQLite",
     "ConnectionString": "Data Source=h3xboard.db"
   },
-  "Jwt": {
-    "SecretKey": "replace-with-32+-char-random-secret",
-    "Issuer": "h3xboard-server",
-    "Audience": "h3xboard-client",
-    "AccessTokenExpiryMinutes": 60,
-    "RefreshTokenExpiryDays": 30
+  "Auth": {
+    "SessionIdleTimeoutDays": 30,
+    "AllowRegistration": true
+  },
+  "Cors": {
+    "AllowedOrigins": ["https://your-client.example.com"]
   }
 }
 ```
+
+See [docs/connecting-and-auth-flow.md](docs/connecting-and-auth-flow.md) for the full authentication flow and the unauthenticated `GET /api/v1/server/info` capabilities endpoint.

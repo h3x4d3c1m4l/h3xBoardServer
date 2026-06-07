@@ -2,6 +2,20 @@
 
 Authentication uses standard HTTP REST endpoints with ASP.NET Core sessions. The client registers or logs in via REST, receives a session cookie, and then presents that cookie when opening the WebSocket connection.
 
+## Step 0 — Discover server capabilities (REST, unauthenticated)
+
+```http
+GET /api/v1/server/info
+```
+
+Returns `200` with a small, unauthenticated capabilities object that clients can read before logging in:
+
+```json
+{ "registrationAllowed": true }
+```
+
+This object is intended to grow over time. For now it only advertises whether the server accepts new registrations — clients should hide or disable their sign-up UI when `registrationAllowed` is `false`.
+
 ## Step 1 — Register or log in (REST)
 
 **Register:**
@@ -33,6 +47,9 @@ Validation rules:
 - `password` must be at least 8 characters
 - `email` must not already be registered (`409` if taken)
 - Wrong email or password both return `401` (no distinction between the two)
+- Registration returns `403` when disabled by the server (`Auth:AllowRegistration` is `false`); login is unaffected
+
+Registration can be turned off server-side via `Auth:AllowRegistration` in `appsettings.json` (default `true`). When disabled, `/api/v1/server/info` reports `"registrationAllowed": false` and the register endpoint rejects all requests with `403`.
 
 ## Step 2 — Connect to the WebSocket
 

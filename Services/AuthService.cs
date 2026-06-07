@@ -7,10 +7,13 @@ public class AuthException(int statusCode, string message) : Exception(message)
     public int StatusCode { get; } = statusCode;
 }
 
-public class AuthService(H3xBoardDbFactory dbFactory)
+public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration configuration)
 {
     public async Task<AuthResult> RegisterAsync(RegisterRequest request, HttpContext httpContext)
     {
+        if (!configuration.GetValue("Auth:AllowRegistration", true))
+            throw new AuthException(403, "Registration is disabled");
+
         if (string.IsNullOrWhiteSpace(request.Email))
             throw new AuthException(400, "Email is required");
         if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)

@@ -117,6 +117,7 @@ app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSecond
 // ////// //
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
+app.MapServerEndpoints();
 app.MapAuthEndpoints();
 app.MapWsEndpoints();
 
