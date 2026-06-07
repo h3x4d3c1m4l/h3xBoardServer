@@ -1,35 +1,11 @@
 # JSON-RPC methods
 
+Authentication is handled via REST — see [connecting-and-auth-flow.md](connecting-and-auth-flow.md). All methods below require an authenticated WebSocket connection (the server enforces this at connection time via the session cookie).
+
 All requests follow JSON-RPC 2.0:
-```json
-{ "jsonrpc": "2.0", "method": "auth.login", "id": 1, "params": { ... } }
-```
 
-## Auth
-
-| Method | Auth required | Description |
-|---|---|---|
-| `auth.v1.register` | No | Create account, returns tokens |
-| `auth.v1.login` | No | Sign in, returns tokens + marks connection authenticated |
-| `auth.v1.refreshToken` | No | Rotate refresh token, returns new access token |
-| `auth.v1.logout` | Yes | Revoke all refresh tokens |
-| `auth.v1.whoami` | Yes | Returns `{ userId, username }` |
-
-**auth.v1.register / auth.v1.login** — request:
 ```json
-{ "jsonrpc": "2.0", "method": "auth.v1.register", "id": 1,
-  "params": { "username": "alice", "email": "alice@example.com", "password": "secret123" } }
-```
-Response:
-```json
-{ "jsonrpc": "2.0", "id": 1,
-  "result": { "accessToken": "...", "refreshToken": "...",
-              "accessTokenExpiresInSeconds": 3600, "userId": 1, "username": "alice" } }
-```
-
-**auth.refreshToken** — request:
-```json
-{ "params": { "refreshToken": "<opaque-token>" } }
+{ "jsonrpc": "2.0", "method": "boards.v1.list", "id": 1, "params": {} }
 ```
 
 ## Boards
@@ -45,18 +21,33 @@ All board methods require authentication.
 | `boards.v1.delete` | Permanently delete a board (no undo) |
 
 **boards.v1.list** response:
+
 ```json
 { "result": [ { "id": "uuid", "title": "My Board", "createdAt": "...", "updatedAt": "..." } ] }
 ```
 
+**boards.v1.get** request:
+
+```json
+{ "params": { "id": "uuid" } }
+```
+
 **boards.v1.create** request:
+
 ```json
 { "params": { "title": "My Board", "data": { "backgroundColor": 4294967295, "widgets": [] } } }
 ```
 
 **boards.v1.update** request — send only what you want to change:
+
 ```json
 { "params": { "id": "uuid", "title": "Renamed" } }
 { "params": { "id": "uuid", "data": { ... } } }
 { "params": { "id": "uuid", "title": "New name", "data": { ... } } }
+```
+
+**boards.v1.delete** request:
+
+```json
+{ "params": { "id": "uuid" } }
 ```

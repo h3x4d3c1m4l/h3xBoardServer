@@ -6,23 +6,24 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>H3xBoardServer</RootNamespace>
     <AssemblyName>H3xBoardServer</AssemblyName>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- JSON-RPC over WebSockets -->
-    <PackageReference Include="StreamJsonRpc" Version="2.*" />
+    <PackageReference Include="StreamJsonRpc" Version="2.25.25" />
 
     <!-- Database access -->
-    <PackageReference Include="linq2db" Version="6.*" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.*" />
+    <PackageReference Include="linq2db" Version="6.3.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
 
     <!-- Migrations -->
-    <PackageReference Include="FluentMigrator" Version="8.*" />
-    <PackageReference Include="FluentMigrator.Runner" Version="8.*" />
-    <PackageReference Include="FluentMigrator.Runner.SQLite" Version="8.*" />
+    <PackageReference Include="FluentMigrator" Version="8.0.1" />
+    <PackageReference Include="FluentMigrator.Runner" Version="8.0.1" />
+    <PackageReference Include="FluentMigrator.Runner.SQLite" Version="8.0.1" />
 
     <!-- Password hashing -->
-    <PackageReference Include="BCrypt.Net-Next" Version="4.*" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.1" />
   </ItemGroup>
 
 </Project>

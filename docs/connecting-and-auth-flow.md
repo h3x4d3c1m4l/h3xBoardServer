@@ -1,102 +1,71 @@
 # Connecting and authentication flow
 
-## Connecting
+Authentication uses standard HTTP REST endpoints with ASP.NET Core sessions. The client registers or logs in via REST, receives a session cookie, and then presents that cookie when opening the WebSocket connection.
 
-Connect to the WebSocket endpoint:
+## Step 1 — Register or log in (REST)
+
+**Register:**
+
+```http
+POST /api/v1/auth/register
+Content-Type: application/json
+
+{ "email": "alice@example.com", "password": "secret123" }
+```
+
+**Login:**
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{ "email": "alice@example.com", "password": "secret123" }
+```
+
+Both return `200`/`201` with a JSON body and set the `.h3xboard.session` cookie:
+
+```json
+{ "userId": 1, "email": "alice@example.com" }
+```
+
+Validation rules:
+- `email` must be non-empty
+- `password` must be at least 8 characters
+- `email` must not already be registered (`409` if taken)
+- Wrong email or password both return `401` (no distinction between the two)
+
+## Step 2 — Connect to the WebSocket
 
 ```text
 ws://<host>/ws/v1
 ```
 
-No token is passed on connect. Authentication happens as the first RPC call after the connection is established.
+The browser or HTTP client must send the `.h3xboard.session` cookie with the upgrade request (browsers do this automatically; Dart's `http` package requires a cookie jar). The server checks the session at connection time — if no valid session is found, the WebSocket is **rejected with HTTP 401** before any RPC traffic is exchanged.
 
-## Registration
+## Step 3 — Use the board API
 
-Call `auth.v1.register` with an email and password. Registration immediately authenticates the connection — no separate login call is needed.
+Once connected, authentication state lives on the connection for its lifetime. All `boards.v1.*` methods are available immediately. See [json-rpc-methods.md](json-rpc-methods.md) for the full method reference.
 
-```json
-{ "jsonrpc": "2.0", "method": "auth.v1.register", "id": 1,
-  "params": { "email": "alice@example.com", "password": "secret123" } }
+## Checking auth state (REST)
+
+```http
+GET /api/v1/auth/whoami
 ```
 
-```json
-{ "jsonrpc": "2.0", "id": 1,
-  "result": {
-    "reconnectToken": "<opaque-token>",
-    "userId": 1,
-    "email": "alice@example.com"
-  }
-}
+Returns `200 { "userId": 1, "email": "alice@example.com" }` if a valid session cookie is present, or `401` if not.
+
+## Logout (REST)
+
+```http
+POST /api/v1/auth/logout
 ```
 
-Validation rules:
+Clears the server-side session. The client should also discard the cookie. Returns `204 No Content`.
 
-- `email` must be non-empty
-- `password` must be at least 8 characters
-- `email` must not already be registered (error code 4009 if taken)
+## Session lifetime
 
-## Login
+Sessions idle-expire after 30 days (configurable via `Auth:SessionIdleTimeoutDays`). Activity on any REST endpoint or WebSocket connection resets the idle timer. No manual token rotation is required — the session cookie is managed automatically.
 
-Call `auth.v1.login` with the registered email and password.
+## CORS and cookies
 
-```json
-{ "jsonrpc": "2.0", "method": "auth.v1.login", "id": 1,
-  "params": { "email": "alice@example.com", "password": "secret123" } }
-```
-
-Response is the same shape as registration. On success, the **current WebSocket connection** is marked as authenticated — all subsequent calls on the same connection work without passing a token again.
-
-Wrong email or password both return error code 4002. The same error is used for both so the caller cannot distinguish which field was wrong.
-
-## Authenticated calls
-
-Authentication state lives on the connection, not per-call. Once `auth.v1.login` or `auth.v1.register` succeeds, every call that requires authentication just works for the lifetime of that connection. When the connection closes, all state is discarded.
-
-To verify the current auth state:
-
-```json
-{ "jsonrpc": "2.0", "method": "auth.v1.whoami", "id": 2, "params": [] }
-```
-
-```json
-{ "result": { "userId": 1, "email": "alice@example.com" } }
-```
-
-## Reconnecting
-
-When the connection drops and the client reconnects, it must re-authenticate. Two options:
-
-**Option A — re-login with password** (if the client doesn't persist tokens):
-
-```json
-{ "method": "auth.v1.login", "params": { "email": "...", "password": "..." } }
-```
-
-**Option B — reconnect token** (preferred; avoids sending the password again):
-
-```json
-{ "jsonrpc": "2.0", "method": "auth.v1.reconnect", "id": 1,
-  "params": { "reconnectToken": "<stored-token>" } }
-```
-
-```json
-{ "result": { "reconnectToken": "<new-token>" } }
-```
-
-Reconnect tokens are **single-use** — each call to `auth.v1.reconnect` revokes the sent token and issues a new one. Store the new token immediately. Tokens expire after 30 days (configurable via `Auth:ReconnectTokenExpiryDays`).
-
-`auth.v1.reconnect` also authenticates the current connection as a side effect, so there is no need to call `auth.v1.login` afterwards.
-
-## Logout
-
-Requires authentication. Revokes **only the current session's** reconnect token — other logged-in devices are unaffected.
-
-```json
-{ "jsonrpc": "2.0", "method": "auth.v1.logout", "id": 1, "params": [] }
-```
-
-## Token storage recommendations (client-side)
-
-- Store the **reconnect token** in secure storage (e.g. Flutter's `flutter_secure_storage`).
-- On app start: load the reconnect token from secure storage, call `auth.v1.reconnect` to get a fresh token and authenticate the connection.
-- On logout: delete the stored token from secure storage in addition to calling `auth.v1.logout`.
+The session cookie uses `SameSite=None` to support cross-origin clients (e.g. Flutter Web served from a different port). Allowed origins must be listed explicitly in `Cors:AllowedOrigins` in `appsettings.json` — wildcard origins are incompatible with `AllowCredentials()`. In development, add your Flutter dev server origin to `appsettings.Development.json`.

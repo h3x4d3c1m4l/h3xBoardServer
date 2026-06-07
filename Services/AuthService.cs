@@ -1,19 +1,20 @@
-using System.Security.Cryptography;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
 
 namespace H3xBoardServer.Services;
 
-public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration config)
+public class AuthException(int statusCode, string message) : Exception(message)
 {
-    private readonly int _reconnectTokenExpiryDays =
-        int.TryParse(config["Auth:ReconnectTokenExpiryDays"], out var d) ? d : 30;
+    public int StatusCode { get; } = statusCode;
+}
 
-    public async Task<LoginResult> RegisterAsync(RegisterRequest request, RpcContext context)
+public class AuthService(H3xBoardDbFactory dbFactory)
+{
+    public async Task<AuthResult> RegisterAsync(RegisterRequest request, HttpContext httpContext)
     {
         if (string.IsNullOrWhiteSpace(request.Email))
-            throw RpcErrors.Validation("Email is required");
+            throw new AuthException(400, "Email is required");
         if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
-            throw RpcErrors.Validation("Password must be at least 8 characters");
+            throw new AuthException(400, "Password must be at least 8 characters");
 
         await using var db = dbFactory.Create();
 
@@ -22,7 +23,7 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration config)
             .Take(1).AsAsyncEnumerable().AnyAsync();
 
         if (exists)
-            throw RpcErrors.Conflict("Email is already registered");
+            throw new AuthException(409, "Email is already registered");
 
         var now = DateTime.UtcNow;
         var user = new UserEntity
@@ -34,17 +35,17 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration config)
         };
 
         var userId = await db.InsertWithInt32IdentityAsync(user);
-        var reconnectToken = await IssueReconnectTokenAsync(userId);
 
-        context.SetAuthenticated(userId, request.Email, reconnectToken);
+        httpContext.Session.SetInt32("userId", userId);
+        httpContext.Session.SetString("email", request.Email);
 
-        return new LoginResult(reconnectToken, userId, request.Email);
+        return new AuthResult(userId, request.Email);
     }
 
-    public async Task<LoginResult> LoginAsync(LoginRequest request, RpcContext context)
+    public async Task<AuthResult> LoginAsync(LoginRequest request, HttpContext httpContext)
     {
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-            throw RpcErrors.InvalidCredentials();
+            throw new AuthException(401, "Invalid credentials");
 
         await using var db = dbFactory.Create();
 
@@ -53,76 +54,11 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration config)
             .Take(1).AsAsyncEnumerable().FirstOrDefaultAsync();
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            throw RpcErrors.InvalidCredentials();
+            throw new AuthException(401, "Invalid credentials");
 
-        var reconnectToken = await IssueReconnectTokenAsync(user.Id);
+        httpContext.Session.SetInt32("userId", user.Id);
+        httpContext.Session.SetString("email", user.Email);
 
-        context.SetAuthenticated(user.Id, user.Email, reconnectToken);
-
-        return new LoginResult(reconnectToken, user.Id, user.Email);
-    }
-
-    public async Task<ReconnectResult> ReconnectAsync(ReconnectRequest request, RpcContext context)
-    {
-        if (string.IsNullOrWhiteSpace(request.ReconnectToken))
-            throw RpcErrors.Validation("Reconnect token is required");
-
-        await using var db = dbFactory.Create();
-
-        var tokenEntity = await db.ReconnectTokens
-            .Where(t => t.Token == request.ReconnectToken && !t.IsRevoked)
-            .Take(1).AsAsyncEnumerable().FirstOrDefaultAsync();
-
-        if (tokenEntity == null || tokenEntity.ExpiresAt <= DateTime.UtcNow)
-            throw RpcErrors.Unauthenticated("Reconnect token is invalid or expired");
-
-        var user = await db.Users
-            .Where(u => u.Id == tokenEntity.UserId)
-            .Take(1).AsAsyncEnumerable().FirstOrDefaultAsync()
-            ?? throw RpcErrors.NotFound("User not found");
-
-        // Revoke the used token (rotation — each token is single-use)
-        tokenEntity.IsRevoked = true;
-        await db.UpdateAsync(tokenEntity);
-
-        var newToken = await IssueReconnectTokenAsync(user.Id);
-
-        context.SetAuthenticated(user.Id, user.Email, newToken);
-
-        return new ReconnectResult(newToken);
-    }
-
-    public async Task LogoutAsync(string reconnectToken)
-    {
-        await using var db = dbFactory.Create();
-        await db.ReconnectTokens
-            .Where(t => t.Token == reconnectToken)
-            .Set(t => t.IsRevoked, true)
-            .UpdateAsync();
-    }
-
-    private async Task<string> IssueReconnectTokenAsync(int userId)
-    {
-        var token = GenerateToken();
-        var now = DateTime.UtcNow;
-
-        await using var db = dbFactory.Create();
-        await db.InsertAsync(new ReconnectTokenEntity
-        {
-            UserId = userId,
-            Token = token,
-            ExpiresAt = now.AddDays(_reconnectTokenExpiryDays),
-            CreatedAt = now,
-            IsRevoked = false,
-        });
-
-        return token;
-    }
-
-    private static string GenerateToken()
-    {
-        var bytes = new byte[64];
-        RandomNumberGenerator.Fill(bytes);
-        return Convert.ToBase64String(bytes);
+        return new AuthResult(user.Id, user.Email);
     }
 }

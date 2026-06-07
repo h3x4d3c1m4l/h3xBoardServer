@@ -1,14 +1,16 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using FluentMigrator.Runner;
 using H3xBoardServer.Data.Migrations;
+using H3xBoardServer.Rest;
+using H3xBoardServer.Rpc;
 using LinqToDB.Data;
 using LinqToDB.DataProvider.SQLite;
-using StreamJsonRpc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Database ────────────────────────────────────────────────────────────────
+// //////// //
+// Database //
+// //////// //
+
 var dbSection = builder.Configuration.GetSection("Database");
 var dbProvider = dbSection["Provider"] ?? "SQLite";
 var dbConnStr = dbSection["ConnectionString"] ?? "Data Source=h3xboard.db";
@@ -25,7 +27,10 @@ DataOptions dataOptions = dbProvider.ToUpperInvariant() switch
 builder.Services.AddSingleton(dataOptions);
 builder.Services.AddSingleton<H3xBoardDbFactory>();
 
-// ── Migrations ──────────────────────────────────────────────────────────────
+// ////////// //
+// Migrations //
+// ////////// //
+
 builder.Services.AddFluentMigratorCore()
     .ConfigureRunner(runner =>
     {
@@ -42,75 +47,74 @@ builder.Services.AddFluentMigratorCore()
     })
     .AddLogging(lb => lb.AddFluentMigratorConsole());
 
-// ── App services ────────────────────────────────────────────────────────────
+// //////// //
+// Sessions //
+// //////// //
+
+var sessionDays = int.TryParse(builder.Configuration["Auth:SessionIdleTimeoutDays"], out var d) ? d : 30;
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(opts =>
+{
+    opts.IdleTimeout = TimeSpan.FromDays(sessionDays);
+    opts.Cookie.HttpOnly = true;
+    opts.Cookie.IsEssential = true;
+    opts.Cookie.SameSite = SameSiteMode.None;
+    opts.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    opts.Cookie.Name = ".h3xboard.session";
+});
+
+// //// //
+// CORS //
+// //// //
+
+// Configure allowed origins in Cors:AllowedOrigins in appsettings.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
+// AllowCredentials() (required for session cookies) is incompatible with AllowAnyOrigin().
+builder.Services.AddCors(opts =>
+    opts.AddDefaultPolicy(p => p
+        .WithOrigins(allowedOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()));
+
+// //////////// //
+// App Services //
+// //////////// //
+
 builder.Services.AddScoped<RpcContext>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<BoardService>();
-builder.Services.AddScoped<AuthRpcV1>();
 builder.Services.AddScoped<BoardsRpcV1>();
-
-builder.Services.AddCors(opts =>
-    opts.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 
-// ── Run migrations on startup ────────────────────────────────────────────────
+if (allowedOrigins.Length == 0)
+    app.Logger.LogWarning("Cors:AllowedOrigins is empty — cross-origin requests will be rejected. Add allowed origins to appsettings.");
+
+// ////////////// //
+// Run Migrations //
+// ////////////// //
+
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<IMigrationRunner>().MigrateUp();
 }
 
-// ── Middleware ───────────────────────────────────────────────────────────────
+// ////////// //
+// Middleware //
+// ////////// //
+
 app.UseCors();
+app.UseSession();  // must be before UseWebSockets and route handlers
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 
-// ── Health check ─────────────────────────────────────────────────────────────
+// ////// //
+// Routes //
+// ////// //
+
 app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
-
-// ── WebSocket / JSON-RPC endpoint — v1 ───────────────────────────────────────
-app.Map("/ws/v1", async (HttpContext httpContext, IServiceProvider services, ILogger<Program> logger) =>
-{
-    if (!httpContext.WebSockets.IsWebSocketRequest)
-    {
-        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-        await httpContext.Response.WriteAsync("WebSocket connection required");
-        return;
-    }
-
-    var webSocket = await httpContext.WebSockets.AcceptWebSocketAsync();
-    var remoteIp = httpContext.Connection.RemoteIpAddress;
-    logger.LogInformation("WebSocket connected from {Ip}", remoteIp);
-
-    await using var scope = services.CreateAsyncScope();
-    var sp = scope.ServiceProvider;
-
-    var context = sp.GetRequiredService<RpcContext>();
-
-    var jsonOptions = new JsonSerializerOptions
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
-
-    var formatter = new SystemTextJsonFormatter { JsonSerializerOptions = jsonOptions };
-    var handler = new WebSocketMessageHandler(webSocket, formatter);
-
-    using var jsonRpc = new JsonRpc(handler);
-    jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<AuthRpcV1>());
-    jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<BoardsRpcV1>());
-    jsonRpc.StartListening();
-
-    try
-    {
-        await jsonRpc.Completion;
-    }
-    catch (Exception ex) when (ex is not OperationCanceledException)
-    {
-        logger.LogError(ex, "WebSocket error for {Ip}", remoteIp);
-    }
-
-    logger.LogInformation("WebSocket disconnected from {Ip}", remoteIp);
-});
+app.MapAuthEndpoints();
+app.MapWsEndpoints();
 
 app.Run();

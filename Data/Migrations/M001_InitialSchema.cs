@@ -2,7 +2,7 @@ using FluentMigrator;
 
 namespace H3xBoardServer.Data.Migrations;
 
-[Migration(1, "Initial schema — users, boards, reconnect_tokens")]
+[Migration(1, "Initial schema — users, boards")]
 public class M001_InitialSchema : Migration
 {
     public override void Up()
@@ -22,21 +22,11 @@ public class M001_InitialSchema : Migration
             .WithColumn("created_at").AsString(30).NotNullable()
             .WithColumn("updated_at").AsString(30).NotNullable();
 
-        Create.Table("reconnect_tokens")
-            .WithColumn("id").AsInt32().PrimaryKey().Identity()
-            .WithColumn("user_id").AsInt32().NotNullable()
-            .WithColumn("token").AsString(255).NotNullable().Unique()
-            .WithColumn("expires_at").AsString(30).NotNullable()
-            .WithColumn("created_at").AsString(30).NotNullable()
-            .WithColumn("is_revoked").AsBoolean().NotNullable().WithDefaultValue(false);
-
         Create.Index("ix_boards_user_id").OnTable("boards").OnColumn("user_id");
-        Create.Index("ix_reconnect_tokens_user_id").OnTable("reconnect_tokens").OnColumn("user_id");
     }
 
     public override void Down()
     {
-        Delete.Table("reconnect_tokens");
         Delete.Table("boards");
         Delete.Table("users");
     }
