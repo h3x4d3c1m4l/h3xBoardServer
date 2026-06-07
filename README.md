@@ -18,7 +18,7 @@ ASP.NET Core 10 backend for [h3xBoard](https://github.com/h3x4d3c1m4l/h3xBoard) 
 ```mermaid
 erDiagram
     users {
-        int     id           PK
+        string  id           PK "UUID v4"
         string  email        UK
         string  password_hash
         string  created_at
@@ -27,7 +27,7 @@ erDiagram
 
     boards {
         string  id           PK "UUID v4"
-        int     user_id      FK
+        string  user_id      FK
         string  title
         text    data            "full board state as JSON (opaque to server)"
         string  created_at
@@ -36,7 +36,7 @@ erDiagram
 
     reconnect_tokens {
         int     id           PK
-        int     user_id      FK
+        string  user_id      FK
         string  token        UK
         string  expires_at
         string  created_at

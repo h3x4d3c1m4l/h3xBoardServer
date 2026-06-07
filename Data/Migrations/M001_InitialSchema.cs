@@ -8,7 +8,7 @@ public class M001_InitialSchema : Migration
     public override void Up()
     {
         Create.Table("users")
-            .WithColumn("id").AsInt32().PrimaryKey().Identity()
+            .WithColumn("id").AsString(36).PrimaryKey()
             .WithColumn("email").AsString(255).NotNullable().Unique()
             .WithColumn("password_hash").AsString(255).NotNullable()
             .WithColumn("created_at").AsString(30).NotNullable()
@@ -16,7 +16,7 @@ public class M001_InitialSchema : Migration
 
         Create.Table("boards")
             .WithColumn("id").AsString(36).PrimaryKey()
-            .WithColumn("user_id").AsInt32().NotNullable()
+            .WithColumn("user_id").AsString(36).NotNullable()
             .WithColumn("title").AsString(255).NotNullable()
             .WithColumn("data").AsString(int.MaxValue).NotNullable()
             .WithColumn("created_at").AsString(30).NotNullable()

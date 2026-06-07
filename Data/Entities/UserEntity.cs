@@ -3,9 +3,9 @@ namespace H3xBoardServer.Data.Entities;
 [Table("users")]
 public class UserEntity
 {
-    [PrimaryKey, Identity]
+    [PrimaryKey]
     [Column("id")]
-    public int Id { get; set; }
+    public string Id { get; set; } = null!;
 
     [Column("email"), NotNull]
     public string Email { get; set; } = null!;

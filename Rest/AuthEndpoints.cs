@@ -38,9 +38,9 @@ public static class AuthEndpoints
 
         app.MapGet("/api/v1/auth/whoami", (HttpContext httpContext) =>
         {
-            var userId = httpContext.Session.GetInt32("userId");
+            var userId = httpContext.Session.GetString("userId");
             var email = httpContext.Session.GetString("email");
-            return userId is null ? Results.Unauthorized() : Results.Ok(new AuthResult(userId.Value, email!));
+            return userId is null ? Results.Unauthorized() : Results.Ok(new AuthResult(userId, email!));
         });
 
         return app;

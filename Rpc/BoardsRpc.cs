@@ -15,7 +15,7 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     public Task<List<BoardSummary>> List()
     {
         context.RequireAuthentication();
-        return boardService.GetBoardsForUserAsync(context.UserId!.Value);
+        return boardService.GetBoardsForUserAsync(context.UserId!);
     }
 
     /// <summary>
@@ -25,7 +25,7 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     public Task<BoardDto> Get(string id)
     {
         context.RequireAuthentication();
-        return boardService.GetBoardAsync(id, context.UserId!.Value);
+        return boardService.GetBoardAsync(id, context.UserId!);
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     public Task<BoardDto> Create(CreateBoardRequest request)
     {
         context.RequireAuthentication();
-        return boardService.CreateBoardAsync(request, context.UserId!.Value);
+        return boardService.CreateBoardAsync(request, context.UserId!);
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     public Task<BoardDto> Update(UpdateBoardRequest request)
     {
         context.RequireAuthentication();
-        return boardService.UpdateBoardAsync(request, context.UserId!.Value);
+        return boardService.UpdateBoardAsync(request, context.UserId!);
     }
 
     /// <summary>
@@ -56,6 +56,6 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     public Task Delete(string id)
     {
         context.RequireAuthentication();
-        return boardService.DeleteBoardAsync(id, context.UserId!.Value);
+        return boardService.DeleteBoardAsync(id, context.UserId!);
     }
 }

@@ -25,7 +25,7 @@ public static class WsEndpoints
         // LoadAsync must be called explicitly in the async WebSocket upgrade path —
         // the session middleware's auto-load does not fire here.
         await httpContext.Session.LoadAsync();
-        var userId = httpContext.Session.GetInt32("userId");
+        var userId = httpContext.Session.GetString("userId");
         var email = httpContext.Session.GetString("email");
 
         if (userId is null || email is null)
@@ -43,7 +43,7 @@ public static class WsEndpoints
         var sp = scope.ServiceProvider;
 
         var context = sp.GetRequiredService<RpcContext>();
-        context.SetAuthenticated(userId.Value, email);
+        context.SetAuthenticated(userId, email);
 
         var jsonOptions = new JsonSerializerOptions
         {

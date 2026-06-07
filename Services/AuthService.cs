@@ -28,18 +28,19 @@ public class AuthService(H3xBoardDbFactory dbFactory)
         var now = DateTime.UtcNow;
         var user = new UserEntity
         {
+            Id = Guid.NewGuid().ToString(),
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, workFactor: 12),
             CreatedAt = now,
             UpdatedAt = now,
         };
 
-        var userId = await db.InsertWithInt32IdentityAsync(user);
+        await db.InsertAsync(user);
 
-        httpContext.Session.SetInt32("userId", userId);
+        httpContext.Session.SetString("userId", user.Id);
         httpContext.Session.SetString("email", request.Email);
 
-        return new AuthResult(userId, request.Email);
+        return new AuthResult(user.Id, request.Email);
     }
 
     public async Task<AuthResult> LoginAsync(LoginRequest request, HttpContext httpContext)
@@ -56,7 +57,7 @@ public class AuthService(H3xBoardDbFactory dbFactory)
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new AuthException(401, "Invalid credentials");
 
-        httpContext.Session.SetInt32("userId", user.Id);
+        httpContext.Session.SetString("userId", user.Id);
         httpContext.Session.SetString("email", user.Email);
 
         return new AuthResult(user.Id, user.Email);

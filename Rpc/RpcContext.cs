@@ -6,11 +6,11 @@ namespace H3xBoardServer.Rpc;
 /// </summary>
 public class RpcContext
 {
-    public int? UserId { get; private set; }
+    public string? UserId { get; private set; }
     public string? Email { get; private set; }
-    public bool IsAuthenticated => UserId.HasValue;
+    public bool IsAuthenticated => UserId is not null;
 
-    public void SetAuthenticated(int userId, string email)
+    public void SetAuthenticated(string userId, string email)
     {
         UserId = userId;
         Email = email;

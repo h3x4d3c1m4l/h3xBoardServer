@@ -8,7 +8,7 @@ public class BoardEntity
     public string Id { get; set; } = null!;
 
     [Column("user_id"), NotNull]
-    public int UserId { get; set; }
+    public string UserId { get; set; } = null!;
 
     [Column("title"), NotNull]
     public string Title { get; set; } = null!;

@@ -2,7 +2,7 @@ namespace H3xBoardServer.Services;
 
 public class BoardService(H3xBoardDbFactory dbFactory)
 {
-    public async Task<List<BoardSummary>> GetBoardsForUserAsync(int userId)
+    public async Task<List<BoardSummary>> GetBoardsForUserAsync(string userId)
     {
         await using var db = dbFactory.Create();
         return await db.Boards
@@ -12,7 +12,7 @@ public class BoardService(H3xBoardDbFactory dbFactory)
             .ToListAsync();
     }
 
-    public async Task<BoardDto> GetBoardAsync(string id, int userId)
+    public async Task<BoardDto> GetBoardAsync(string id, string userId)
     {
         await using var db = dbFactory.Create();
         var entity = await db.Boards
@@ -23,7 +23,7 @@ public class BoardService(H3xBoardDbFactory dbFactory)
         return MapToDto(entity);
     }
 
-    public async Task<BoardDto> CreateBoardAsync(CreateBoardRequest request, int userId)
+    public async Task<BoardDto> CreateBoardAsync(CreateBoardRequest request, string userId)
     {
         if (string.IsNullOrWhiteSpace(request.Title))
             throw RpcErrors.Validation("Title is required");
@@ -45,7 +45,7 @@ public class BoardService(H3xBoardDbFactory dbFactory)
         return MapToDto(entity);
     }
 
-    public async Task<BoardDto> UpdateBoardAsync(UpdateBoardRequest request, int userId)
+    public async Task<BoardDto> UpdateBoardAsync(UpdateBoardRequest request, string userId)
     {
         await using var db = dbFactory.Create();
         var entity = await db.Boards
@@ -69,7 +69,7 @@ public class BoardService(H3xBoardDbFactory dbFactory)
         return MapToDto(entity);
     }
 
-    public async Task DeleteBoardAsync(string id, int userId)
+    public async Task DeleteBoardAsync(string id, string userId)
     {
         await using var db = dbFactory.Create();
         var deleted = await db.Boards
