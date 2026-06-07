@@ -59,7 +59,10 @@ builder.Services.AddSession(opts =>
     opts.Cookie.HttpOnly = true;
     opts.Cookie.IsEssential = true;
     opts.Cookie.SameSite = SameSiteMode.None;
-    opts.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    // SameSite=None requires the Secure attribute, so the cookie must always be marked Secure.
+    // Chrome accepts Secure cookies over http://localhost (treated as a secure context), so this
+    // works in development without HTTPS, and is also correct in production behind TLS.
+    opts.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     opts.Cookie.Name = ".h3xboard.session";
 });
 
