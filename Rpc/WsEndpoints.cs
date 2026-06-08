@@ -12,7 +12,7 @@ public static class WsEndpoints
         return app;
     }
 
-    private static async Task HandleV1(HttpContext httpContext, IServiceProvider services, ILoggerFactory loggerFactory)
+    private static async Task HandleV1(HttpContext httpContext, IServiceProvider services, ILoggerFactory loggerFactory, IHostEnvironment env)
     {
         var logger = loggerFactory.CreateLogger(nameof(WsEndpoints));
         if (!httpContext.WebSockets.IsWebSocketRequest)
@@ -57,6 +57,8 @@ public static class WsEndpoints
 
         using var jsonRpc = new JsonRpc(handler);
         jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<BoardsRpcV1>());
+        if (env.IsDevelopment())
+            jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<SystemRpcV1>());
         jsonRpc.StartListening();
 
         try

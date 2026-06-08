@@ -43,6 +43,7 @@ Both return `200`/`201` with a JSON body and set the `.h3xboard.session` cookie:
 ```
 
 Validation rules:
+
 - `email` must be non-empty
 - `password` must be at least 8 characters
 - `email` must not already be registered (`409` if taken)

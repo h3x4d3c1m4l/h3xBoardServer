@@ -18,7 +18,7 @@ Single ASP.NET Core project (`H3xBoardServer.csproj`, net10.0). All entry-point 
 
 ### Request path
 
-```
+```text
 REST /api/v1/auth/*  →  Program.cs (minimal API lambdas)
                      →  AuthService (validates, sets HttpContext.Session)
                      →  H3xBoardDbFactory.Create() → H3xBoardDb (linq2db DataConnection)
@@ -40,13 +40,13 @@ Migrations run automatically at startup via `IMigrationRunner.MigrateUp()`.
 
 **Per-connection scope** — Each WebSocket connection gets its own `IServiceScope` (created with `CreateAsyncScope` in `Program.cs`). All scoped services — `RpcContext`, `BoardsRpcV1`, `BoardService` — live inside that scope and are disposed when the connection closes.
 
-**`RpcContext`** (`Rpc/RpcContext.cs`) — Per-connection auth state, pre-populated from the session before JSON-RPC starts. `BoardsRpcV1` and `BoardService` read `RpcContext.UserId`/`Email` for the lifetime of the connection. `RequireAuthentication()` throws `LocalRpcException(4001)` as defense-in-depth (normally all WS connections are already authenticated).
+**`RpcContext`** (`Rpc/RpcContext.cs`) — Per-connection auth state, pre-populated from the session before JSON-RPC starts. `BoardsRpcV1` and `BoardService` read `RpcContext.UserId`/`Email` for the lifetime of the connection. There is no per-method auth guard: the `/ws/v1` handler (`Rpc/WsEndpoints.cs`) is the single auth checkpoint — it returns HTTP 401 before accepting the WebSocket if the session is unauthenticated, so every RPC method runs with `UserId` already set (hence the `context.UserId!` usage).
 
 **`H3xBoardDbFactory`** — Registered as singleton; each async operation calls `dbFactory.Create()` and disposes immediately with `await using`. This is intentional: `linq2db DataConnection` is not thread-safe and JSON-RPC allows concurrent in-flight calls on one connection.
 
 **Board data blob** — The `boards.data` column is opaque JSON owned by the Flutter client. The server never parses it. `BoardService.MapToDto` does `JsonDocument.Parse(...).RootElement.Clone()` to return a `JsonElement` that owns its own memory independent of the parsed document lifetime.
 
-**Error handling** — REST endpoints throw `AuthException` (defined in `AuthService.cs`) which carries an HTTP status code, caught by the endpoint lambda and mapped to `Results.Problem()`. WebSocket RPC errors throw `LocalRpcException` via helpers in `Rpc/RpcErrors.cs` (codes 4001–5000), propagated to the client as JSON-RPC error responses.
+**Error handling** — REST endpoints throw `AuthException` (defined in `AuthService.cs`) which carries an HTTP status code, caught by the endpoint lambda and mapped to `Results.Problem()`. WebSocket RPC errors throw `LocalRpcException` via helpers in `Rpc/RpcErrors.cs` (HTTP-status-aligned codes in the 4000-5000 range, e.g. 4004 not-found, 4022 validation), propagated to the client as JSON-RPC error responses. Any other (unexpected) exception escaping a method surfaces with StreamJsonRpc's default invocation-error code `-32000`, not a custom code. The Development-only `SystemRpc` (`Rpc/SystemRpc.cs`, registered in `Rpc/WsEndpoints.cs` only when `env.IsDevelopment()`) exposes `system.v1.throw` to exercise that path.
 
 **Session storage** — `AddDistributedMemoryCache()` stores sessions in-process. This is correct for single-instance deployments. For multi-instance deployments, switch to `AddStackExchangeRedisCache()` or `AddSqlServerCache()`.
 

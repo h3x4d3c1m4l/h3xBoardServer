@@ -56,6 +56,7 @@ builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(opts =>
 {
     opts.IdleTimeout = TimeSpan.FromDays(sessionDays);
+    opts.Cookie.MaxAge = TimeSpan.FromDays(sessionDays);
     opts.Cookie.HttpOnly = true;
     opts.Cookie.IsEssential = true;
     opts.Cookie.SameSite = SameSiteMode.None;
@@ -89,6 +90,7 @@ builder.Services.AddScoped<RpcContext>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<BoardService>();
 builder.Services.AddScoped<BoardsRpcV1>();
+builder.Services.AddScoped<SystemRpcV1>();
 
 var app = builder.Build();
 
@@ -110,6 +112,33 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors();
 app.UseSession();  // must be before UseWebSockets and route handlers
+
+// Sliding expiry: ASP.NET Core only emits the session cookie when the session is first
+// established, so a persistent Cookie.MaxAge gives a fixed window that expires even for an
+// active user. Re-stamp the cookie on each authenticated request so its lifetime tracks the
+// server-side sliding IdleTimeout.
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (!context.Response.HasStarted                                   // skip WS upgrades / started responses
+        && context.Request.Cookies.TryGetValue(".h3xboard.session", out var sessionId)
+        && !string.IsNullOrEmpty(sessionId)
+        && context.Session.IsAvailable
+        && context.Session.GetString("userId") is not null)            // null after logout's Session.Clear()
+    {
+        context.Response.Cookies.Append(".h3xboard.session", sessionId, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.None,
+            IsEssential = true,
+            Path = "/",
+            MaxAge = TimeSpan.FromDays(sessionDays),
+        });
+    }
+});
+
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 
 // ////// //

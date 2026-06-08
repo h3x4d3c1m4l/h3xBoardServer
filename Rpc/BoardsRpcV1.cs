@@ -14,7 +14,6 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     [JsonRpcMethod("boards.v1.list")]
     public Task<List<BoardSummary>> List()
     {
-        context.RequireAuthentication();
         return boardService.GetBoardsForUserAsync(context.UserId!);
     }
 
@@ -24,7 +23,6 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     [JsonRpcMethod("boards.v1.get")]
     public Task<BoardDto> Get(string id)
     {
-        context.RequireAuthentication();
         return boardService.GetBoardAsync(id, context.UserId!);
     }
 
@@ -34,7 +32,6 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     [JsonRpcMethod("boards.v1.create")]
     public Task<BoardDto> Create(CreateBoardRequest request)
     {
-        context.RequireAuthentication();
         return boardService.CreateBoardAsync(request, context.UserId!);
     }
 
@@ -45,7 +42,6 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     [JsonRpcMethod("boards.v1.update")]
     public Task<BoardDto> Update(UpdateBoardRequest request)
     {
-        context.RequireAuthentication();
         return boardService.UpdateBoardAsync(request, context.UserId!);
     }
 
@@ -55,7 +51,6 @@ public class BoardsRpcV1(BoardService boardService, RpcContext context)
     [JsonRpcMethod("boards.v1.delete")]
     public Task Delete(string id)
     {
-        context.RequireAuthentication();
         return boardService.DeleteBoardAsync(id, context.UserId!);
     }
 }

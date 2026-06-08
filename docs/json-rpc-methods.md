@@ -13,7 +13,7 @@ All requests follow JSON-RPC 2.0:
 All board methods require authentication.
 
 | Method | Description |
-|---|---|
+| --- | --- |
 | `boards.v1.list` | List all boards (summary only, no data blob), most-recently-updated first |
 | `boards.v1.get` | Fetch one board including full JSON data blob |
 | `boards.v1.create` | Create a board |
@@ -51,3 +51,11 @@ All board methods require authentication.
 ```json
 { "params": { "id": "uuid" } }
 ```
+
+## Diagnostics (Development only)
+
+These methods are registered only when the server runs in the Development environment.
+
+| Method | Description |
+| --- | --- |
+| `system.v1.throw` | Deliberately throws an unhandled exception. Use it to inspect how unexpected server errors surface — see [error-codes.md](error-codes.md) (they return JSON-RPC code `-32000`, not a custom code). |
