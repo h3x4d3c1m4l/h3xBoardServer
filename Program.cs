@@ -1,9 +1,8 @@
 using FluentMigrator.Runner;
 using H3xBoardServer.Data.Migrations;
+using Microsoft.AspNetCore.DataProtection;
 using H3xBoardServer.Rest;
-using H3xBoardServer.Rpc;
-using LinqToDB.Data;
-using LinqToDB.DataProvider.SQLite;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,12 +46,37 @@ builder.Services.AddFluentMigratorCore()
     })
     .AddLogging(lb => lb.AddFluentMigratorConsole());
 
+// //////////////////////////// //
+// Distributed cache & key ring //
+// //////////////////////////// //
+
+// Dragonfly (Redis-compatible) backs both the distributed session cache and the DataProtection
+// key ring, so sessions and the cookie-encryption keys survive restarts and are shared across
+// instances. Configure via Redis:ConnectionString (e.g. "dragonfly:6379"). When empty, falls back
+// to an in-process cache and default (filesystem) key storage — fine for local dev, but
+// single-instance only and keys are lost on a container restart.
+var redisConnStr = builder.Configuration["Redis:ConnectionString"];
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("H3xBoardServer");
+
+if (!string.IsNullOrWhiteSpace(redisConnStr))
+{
+    // One multiplexer shared by the cache and the key ring (StackExchange.Redis is thread-safe).
+    var redis = ConnectionMultiplexer.Connect(redisConnStr);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+    builder.Services.AddStackExchangeRedisCache(opts =>
+        opts.ConnectionMultiplexerFactory = () => Task.FromResult<IConnectionMultiplexer>(redis));
+    dataProtection.PersistKeysToStackExchangeRedis(redis, "h3xboard:DataProtection-Keys");
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+
 // //////// //
 // Sessions //
 // //////// //
 
 var sessionDays = int.TryParse(builder.Configuration["Auth:SessionIdleTimeoutDays"], out var d) ? d : 30;
-builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(opts =>
 {
     opts.IdleTimeout = TimeSpan.FromDays(sessionDays);
@@ -96,6 +120,9 @@ var app = builder.Build();
 
 if (allowedOrigins.Length == 0)
     app.Logger.LogWarning("Cors:AllowedOrigins is empty — cross-origin requests will be rejected. Add allowed origins to appsettings.");
+
+if (string.IsNullOrWhiteSpace(redisConnStr))
+    app.Logger.LogWarning("Redis:ConnectionString is empty — using in-process session cache and filesystem DataProtection keys. This is single-instance only; sessions and keys do not survive a container restart. Set Redis:ConnectionString (e.g. a Dragonfly instance) for production.");
 
 // ////////////// //
 // Run Migrations //

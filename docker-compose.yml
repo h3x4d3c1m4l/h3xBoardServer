@@ -1,0 +1,40 @@
+# Easy local/self-hosted deployment: the server plus a Dragonfly (Redis-compatible) instance
+# that backs the distributed session cache and the DataProtection key ring.
+#
+#   docker compose up -d            # pull the published image and run
+#   docker compose up -d --build    # build the image from this checkout instead
+services:
+  server:
+    image: ghcr.io/h3x4d3c1m4l/h3xboardserver:latest
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      Redis__ConnectionString: "dragonfly:6379"
+      # Session cookies require an explicit cross-origin allow-list (no wildcards):
+      # Cors__AllowedOrigins__0: "https://your-client.example.com"
+      # Auth__AllowRegistration: "false"
+    volumes:
+      - h3xboard-data:/data
+    depends_on:
+      dragonfly:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    # Dragonfly keeps its working set in memory; raise the memlock limit so it can pin it.
+    ulimits:
+      memlock: -1
+    volumes:
+      - dragonfly-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  h3xboard-data:
+  dragonfly-data:

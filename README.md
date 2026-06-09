@@ -87,21 +87,35 @@ See [docs/connecting-and-auth-flow.md](docs/connecting-and-auth-flow.md) for the
 
 A multi-stage [`Dockerfile`](Dockerfile) (based on the [Microsoft .NET template](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/docker/building-net-docker-images?view=aspnetcore-10.0)) builds and runs the server as a non-root user. The container listens on port **8080**, and the SQLite database lives in the **`/data`** volume so it survives container restarts.
 
-Build and run locally:
+### Compose (recommended)
+
+[`docker-compose.yml`](docker-compose.yml) runs the server alongside [Dragonfly](https://www.dragonflydb.io/) (a faster, Redis-compatible store) that backs the distributed session cache and the DataProtection key ring — so sessions and cookie-encryption keys survive restarts and work across multiple instances:
+
+```sh
+docker compose up -d            # pull the published image and run
+docker compose up -d --build    # build the image from this checkout instead
+```
+
+Set your client's origin (and any other config) in the `server.environment` block of the compose file before exposing it publicly.
+
+### Plain `docker run`
 
 ```sh
 docker build -t h3xboardserver .
 docker run -d -p 8080:8080 -v h3xboard-data:/data h3xboardserver
 ```
 
-Configuration is supplied via environment variables (double-underscore maps to the config hierarchy). The connection string defaults to `Data Source=/data/h3xboard.db` inside the image; override CORS and other settings as needed:
+Configuration is supplied via environment variables (double-underscore maps to the config hierarchy). The connection string defaults to `Data Source=/data/h3xboard.db` inside the image; point `Redis__ConnectionString` at a Dragonfly/Redis instance for multi-instance and restart-safe sessions, and override CORS as needed:
 
 ```sh
 docker run -d -p 8080:8080 -v h3xboard-data:/data \
+  -e 'Redis__ConnectionString=dragonfly:6379' \
   -e 'Cors__AllowedOrigins__0=https://your-client.example.com' \
   -e 'Auth__AllowRegistration=false' \
   ghcr.io/h3x4d3c1m4l/h3xboardserver:latest
 ```
+
+> When `Redis__ConnectionString` is empty (the default), the server uses an in-process session cache and filesystem DataProtection keys — fine for local dev, but single-instance only and sessions/keys are lost on restart.
 
 ### Published images
 

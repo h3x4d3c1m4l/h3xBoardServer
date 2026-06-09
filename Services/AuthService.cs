@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
 namespace H3xBoardServer.Services;
 
 public class AuthException(int statusCode, string message) : Exception(message)

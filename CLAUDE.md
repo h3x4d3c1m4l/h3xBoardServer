@@ -14,11 +14,10 @@ There are no automated tests yet. There is no linter configured beyond the IDE.
 
 ### Docker
 
-`Dockerfile` is a multi-stage build (Microsoft .NET template) that runs as the non-root `$APP_UID` user, listens on port 8080, and keeps SQLite in the `/data` volume (`Database__ConnectionString` is set to `Data Source=/data/h3xboard.db` in the image). `.github/workflows/build-and-push-image.yml` builds and pushes `ghcr.io/<repo>:latest` and `:<sha>` to GHCR on every push to `main`.
+`Dockerfile` is a multi-stage build (Microsoft .NET template) that runs as the non-root `$APP_UID` user, listens on port 8080, and keeps SQLite in the `/data` volume (`Database__ConnectionString` is set to `Data Source=/data/h3xboard.db` in the image). `.github/workflows/build-and-push-image.yml` builds and pushes `ghcr.io/<repo>:latest` and `:<sha>` to GHCR on every push to `main`. `docker-compose.yml` runs the server plus a Dragonfly (Redis-compatible) instance for restart-safe, multi-instance sessions.
 
 ```sh
-docker build -t h3xboardserver .
-docker run -d -p 8080:8080 -v h3xboard-data:/data h3xboardserver
+docker compose up -d --build    # server + Dragonfly
 ```
 
 ## Architecture
@@ -57,7 +56,7 @@ Migrations run automatically at startup via `IMigrationRunner.MigrateUp()`.
 
 **Error handling** — REST endpoints throw `AuthException` (defined in `AuthService.cs`) which carries an HTTP status code, caught by the endpoint lambda and mapped to `Results.Problem()`. WebSocket RPC errors throw `LocalRpcException` via helpers in `Rpc/RpcErrors.cs` (HTTP-status-aligned codes in the 4000-5000 range, e.g. 4004 not-found, 4022 validation), propagated to the client as JSON-RPC error responses. Any other (unexpected) exception escaping a method surfaces with StreamJsonRpc's default invocation-error code `-32000`, not a custom code. The Development-only `SystemRpc` (`Rpc/SystemRpc.cs`, registered in `Rpc/WsEndpoints.cs` only when `env.IsDevelopment()`) exposes `system.v1.throw` to exercise that path.
 
-**Session storage** — `AddDistributedMemoryCache()` stores sessions in-process. This is correct for single-instance deployments. For multi-instance deployments, switch to `AddStackExchangeRedisCache()` or `AddSqlServerCache()`.
+**Session storage & DataProtection** — When `Redis:ConnectionString` is set (e.g. a Dragonfly instance), `Program.cs` shares one `IConnectionMultiplexer` between `AddStackExchangeRedisCache()` (the session store) and `PersistKeysToStackExchangeRedis()` (the DataProtection key ring keyed `h3xboard:DataProtection-Keys`). This makes sessions and the cookie-encryption keys both restart-safe and multi-instance. When the connection string is empty, it falls back to `AddDistributedMemoryCache()` + filesystem keys — single-instance and lost on restart (a startup warning is logged). `SetApplicationName("H3xBoardServer")` is always set so the key ring is stable. Note: keys are stored unencrypted at rest (the `XmlKeyManager` "No XML encryptor configured" log) — encryption at rest would require `ProtectKeysWithCertificate` and a provisioned cert.
 
 ### Versioning model
 
