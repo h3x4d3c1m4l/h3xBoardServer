@@ -82,3 +82,32 @@ For production, configure `appsettings.Production.json`:
 ```
 
 See [docs/connecting-and-auth-flow.md](docs/connecting-and-auth-flow.md) for the full authentication flow and the unauthenticated `GET /api/v1/server/info` capabilities endpoint.
+
+## Docker
+
+A multi-stage [`Dockerfile`](Dockerfile) (based on the [Microsoft .NET template](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/docker/building-net-docker-images?view=aspnetcore-10.0)) builds and runs the server as a non-root user. The container listens on port **8080**, and the SQLite database lives in the **`/data`** volume so it survives container restarts.
+
+Build and run locally:
+
+```sh
+docker build -t h3xboardserver .
+docker run -d -p 8080:8080 -v h3xboard-data:/data h3xboardserver
+```
+
+Configuration is supplied via environment variables (double-underscore maps to the config hierarchy). The connection string defaults to `Data Source=/data/h3xboard.db` inside the image; override CORS and other settings as needed:
+
+```sh
+docker run -d -p 8080:8080 -v h3xboard-data:/data \
+  -e 'Cors__AllowedOrigins__0=https://your-client.example.com' \
+  -e 'Auth__AllowRegistration=false' \
+  ghcr.io/h3x4d3c1m4l/h3xboardserver:latest
+```
+
+### Published images
+
+Every push to `main` builds the image and pushes it to GitHub Container Registry via [`.github/workflows/build-and-push-image.yml`](.github/workflows/build-and-push-image.yml), tagged `latest` and the commit SHA:
+
+```text
+ghcr.io/h3x4d3c1m4l/h3xboardserver:latest
+ghcr.io/h3x4d3c1m4l/h3xboardserver:<commit-sha>
+```

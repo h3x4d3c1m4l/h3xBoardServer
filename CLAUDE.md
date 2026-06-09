@@ -12,6 +12,15 @@ dotnet run --environment Development   # uses h3xboard-dev.db
 
 There are no automated tests yet. There is no linter configured beyond the IDE.
 
+### Docker
+
+`Dockerfile` is a multi-stage build (Microsoft .NET template) that runs as the non-root `$APP_UID` user, listens on port 8080, and keeps SQLite in the `/data` volume (`Database__ConnectionString` is set to `Data Source=/data/h3xboard.db` in the image). `.github/workflows/build-and-push-image.yml` builds and pushes `ghcr.io/<repo>:latest` and `:<sha>` to GHCR on every push to `main`.
+
+```sh
+docker build -t h3xboardserver .
+docker run -d -p 8080:8080 -v h3xboard-data:/data h3xboardserver
+```
+
 ## Architecture
 
 Single ASP.NET Core project (`H3xBoardServer.csproj`, net10.0). All entry-point wiring — DI registration, migration runner, REST endpoints, and WebSocket endpoint — lives in `Program.cs`.

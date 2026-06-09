@@ -1,0 +1,25 @@
+# Build output
+**/bin/
+**/obj/
+**/out/
+
+# Local SQLite databases (never bake these into the image)
+*.db
+*.db-shm
+*.db-wal
+
+# Git / CI / editor
+.git/
+.github/
+.vscode/
+.vs/
+.idea/
+
+# Docker itself
+Dockerfile
+.dockerignore
+
+# Docs and misc
+docs/
+*.md
+.mcp.json
