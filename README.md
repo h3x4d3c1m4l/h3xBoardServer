@@ -98,6 +98,8 @@ docker compose up -d --build    # build the image from this checkout instead
 
 Set your client's origin (and any other config) in the `server.environment` block of the compose file before exposing it publicly.
 
+Dragonfly is configured to snapshot to its `dragonfly-data` volume — every 5 minutes (`--snapshot_cron`) and on graceful shutdown — so the session store and the DataProtection key ring survive a Dragonfly container recreation (e.g. an image upgrade), not just a server upgrade. Keep the `dragonfly-data` volume across upgrades; deleting it logs everyone out. By default (no `--snapshot_cron`) Dragonfly only flushes on graceful shutdown, so a force-kill would lose the key ring and break every session cookie.
+
 ### Plain `docker run`
 
 ```sh

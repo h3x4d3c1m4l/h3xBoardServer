@@ -23,6 +23,18 @@ services:
 
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    # Persist to the volume so the session store + DataProtection key ring survive a
+    # Dragonfly container recreation. Without this Dragonfly only flushes on a graceful
+    # shutdown, so a force-kill loses the key ring and every session cookie breaks.
+    command:
+      - "--dir"
+      - "/data"
+      - "--dbfilename"
+      - "dump"            # fixed name (no {timestamp}) so snapshots overwrite, not accumulate
+      - "--snapshot_cron"
+      - "*/5 * * * *"     # periodic save, independent of shutdown grace
+    # Give the on-shutdown save time to complete on `docker compose stop/down`.
+    stop_grace_period: 30s
     # Dragonfly keeps its working set in memory; raise the memlock limit so it can pin it.
     ulimits:
       memlock: -1

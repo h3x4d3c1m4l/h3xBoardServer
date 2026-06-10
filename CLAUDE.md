@@ -14,7 +14,7 @@ There are no automated tests yet. There is no linter configured beyond the IDE.
 
 ### Docker
 
-`Dockerfile` is a multi-stage build (Microsoft .NET template) that runs as the non-root `$APP_UID` user, listens on port 8080, and keeps SQLite in the `/data` volume (`Database__ConnectionString` is set to `Data Source=/data/h3xboard.db` in the image). `.github/workflows/build-and-push-image.yml` builds and pushes `ghcr.io/<repo>:latest` and `:<sha>` to GHCR on every push to `main`. `docker-compose.yml` runs the server plus a Dragonfly (Redis-compatible) instance for restart-safe, multi-instance sessions.
+`Dockerfile` is a multi-stage build (Microsoft .NET template) that runs as the non-root `$APP_UID` user, listens on port 8080, and keeps SQLite in the `/data` volume (`Database__ConnectionString` is set to `Data Source=/data/h3xboard.db` in the image). `.github/workflows/build-and-push-image.yml` builds and pushes `ghcr.io/<repo>:latest` and `:<sha>` to GHCR on every push to `main`. `docker-compose.yml` runs the server plus a Dragonfly (Redis-compatible) instance for restart-safe, multi-instance sessions. The `dragonfly` service is given `--snapshot_cron "*/5 * * * *"` + `--dbfilename dump` and a 30s `stop_grace_period` so it actually persists its in-memory data (session store **and** DataProtection key ring) to the `dragonfly-data` volume — without `--snapshot_cron` Dragonfly only flushes on graceful shutdown, so a force-killed/recreated Dragonfly container loses the key ring and every session cookie fails to decrypt.
 
 ```sh
 docker compose up -d --build    # server + Dragonfly
