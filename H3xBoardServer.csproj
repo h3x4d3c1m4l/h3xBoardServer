@@ -11,15 +11,15 @@
 
   <ItemGroup>
     <!-- JSON-RPC over WebSockets -->
-    <PackageReference Include="StreamJsonRpc" Version="2.25.25" />
+    <PackageReference Include="StreamJsonRpc" Version="2.25.29" />
 
     <!-- Redis/Dragonfly: distributed session cache + DataProtection key ring -->
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.9" />
 
     <!-- Database access -->
     <PackageReference Include="linq2db" Version="6.3.0" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
 
     <!-- Migrations -->
     <PackageReference Include="FluentMigrator" Version="8.0.1" />

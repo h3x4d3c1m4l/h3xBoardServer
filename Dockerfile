@@ -10,7 +10,7 @@ WORKDIR /source
 
 # Copy project and lock file, then restore as a distinct layer (cached unless deps change).
 COPY H3xBoardServer.csproj packages.lock.json ./
-RUN dotnet restore
+RUN dotnet restore --locked-mode
 
 # Copy the rest of the source and publish.
 COPY . .
