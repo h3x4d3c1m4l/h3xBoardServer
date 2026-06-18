@@ -40,7 +40,9 @@ public static class AuthEndpoints
         {
             var userId = httpContext.Session.GetString("userId");
             var email = httpContext.Session.GetString("email");
-            return userId is null ? Results.Unauthorized() : Results.Ok(new AuthResult(userId, email!));
+            var firstName = httpContext.Session.GetString("firstName");
+            var lastName = httpContext.Session.GetString("lastName");
+            return userId is null ? Results.Unauthorized() : Results.Ok(new AuthResult(userId, email!, firstName, lastName));
         });
 
         return app;
