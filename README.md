@@ -21,6 +21,8 @@ erDiagram
         string  id           PK "UUID v4"
         string  email        UK
         string  password_hash
+        string  first_name      "optional"
+        string  last_name       "optional"
         string  created_at
         string  updated_at
     }
@@ -34,7 +36,21 @@ erDiagram
         string  updated_at
     }
 
+    files {
+        string  id           PK "UUID v4"
+        string  owner_scope     "owner type — 'user' today, 'company' in future"
+        string  owner_id     FK "id of the owning user (per owner_scope)"
+        string  storage_key     "physical key the bytes live under (UUID-based)"
+        string  path            "virtual folder, '' = root (decoupled from storage_key)"
+        string  file_name       "leaf name within path, e.g. 'sunset.jpg'"
+        string  content_type
+        long    size_bytes
+        string  created_at
+        string  updated_at
+    }
+
     users ||--o{ boards : owns
+    users ||--o{ files : owns
 ```
 
 ## Documentation
@@ -45,6 +61,7 @@ Additional docs are in the [docs/](docs/) folder:
 - [Connecting & auth flow](docs/connecting-and-auth-flow.md)
 - [JSON-RPC methods](docs/json-rpc-methods.md)
 - [Error codes](docs/error-codes.md)
+- [File storage](docs/file-storage.md)
 - [Adding a database provider](docs/adding-a-database-provider.md)
 
 ## Getting started

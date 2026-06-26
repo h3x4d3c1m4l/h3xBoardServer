@@ -1,7 +1,7 @@
 namespace H3xBoardServer.Rpc.Dtos;
 
 /// <summary>
-/// Basic, unauthenticated server information. Intended to grow over time;
-/// for now it only advertises whether new registrations are accepted.
+/// Basic, unauthenticated server information. Intended to grow over time. Advertises whether new
+/// registrations are accepted and the maximum file upload size so clients can validate before sending.
 /// </summary>
-public record ServerInfo(bool RegistrationAllowed);
+public record ServerInfo(bool RegistrationAllowed, long MaxUploadBytes);

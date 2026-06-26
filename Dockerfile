@@ -23,9 +23,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
 
-# SQLite lives in a dedicated, writable directory so it can be backed by a volume and
-# survive container restarts. Owned by the non-root app user the base image ships with.
+# SQLite and uploaded files live in a dedicated, writable directory so they can be backed by a
+# volume and survive container restarts. Owned by the non-root app user the base image ships with.
 ENV Database__ConnectionString="Data Source=/data/h3xboard.db"
+ENV Storage__FileSystem__RootPath="/data/files"
 RUN mkdir -p /data && chown $APP_UID:$APP_UID /data
 VOLUME /data
 

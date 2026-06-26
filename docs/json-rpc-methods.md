@@ -52,6 +52,52 @@ All board methods require authentication.
 { "params": { "id": "uuid" } }
 ```
 
+## Files
+
+All file methods require authentication and operate on the authenticated user's files. Bytes are
+carried inline as base64. See [file-storage.md](file-storage.md) for the storage model and size limit.
+
+Files live in **virtual folders**: each file has a `path` (the folder, `""` = root) and a `fileName`
+(the leaf). The path is decoupled from physical storage — see [file-storage.md](file-storage.md).
+
+> **Bytes are not on the WebSocket.** Only the metadata operations below are JSON-RPC. Uploading and
+> downloading the file bytes are **REST** (`POST` / `GET /api/v1/files`) so binary streams natively —
+> see [file-storage.md](file-storage.md#rest-endpoints).
+
+| Method | Description |
+| --- | --- |
+| `files.v1.browse` | List one folder — the immediate sub-folders and the files directly in it (metadata only, no bytes) |
+| `files.v1.delete` | Permanently delete a file — bytes and metadata (no undo) |
+
+**files.v1.browse** request — `path` is optional (omit or `""` for the root folder):
+
+```json
+{ "params": { "path": "boards/123" } }
+{ "params": {} }
+```
+
+**files.v1.browse** response — sub-folders (names) plus the files directly in `path`:
+
+```json
+{ "result": {
+  "path": "boards/123",
+  "folders": ["backgrounds"],
+  "files": [ { "id": "uuid", "path": "boards/123", "fileName": "notes.txt", "contentType": "text/plain", "sizeBytes": 20480, "createdAt": "...", "updatedAt": "..." } ]
+} }
+```
+
+**files.v1.delete** request:
+
+```json
+{ "params": { "id": "uuid" } }
+```
+
+**files.v1.delete** request:
+
+```json
+{ "params": { "id": "uuid" } }
+```
+
 ## Diagnostics (Development only)
 
 These methods are registered only when the server runs in the Development environment.

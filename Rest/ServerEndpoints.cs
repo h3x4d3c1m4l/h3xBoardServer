@@ -8,7 +8,8 @@ public static class ServerEndpoints
         app.MapGet("/api/v1/server/info", (IConfiguration configuration) =>
         {
             var registrationAllowed = configuration.GetValue("Auth:AllowRegistration", true);
-            return Results.Ok(new ServerInfo(registrationAllowed));
+            var maxUploadBytes = configuration.GetValue("Storage:MaxUploadBytes", 10L * 1024 * 1024);
+            return Results.Ok(new ServerInfo(registrationAllowed, maxUploadBytes));
         });
 
         return app;

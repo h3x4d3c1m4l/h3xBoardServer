@@ -116,6 +116,12 @@ builder.Services.AddScoped<BoardService>();
 builder.Services.AddScoped<BoardsRpcV1>();
 builder.Services.AddScoped<SystemRpcV1>();
 
+// File storage — swap the IFileStorage implementation here when adding S3/Azure backends
+// (mirror the Database:Provider switch pattern, keyed on Storage:Backend). See docs/file-storage.md.
+builder.Services.AddSingleton<IFileStorage, FileSystemFileStorage>();
+builder.Services.AddScoped<FileService>();
+builder.Services.AddScoped<FilesRpcV1>();
+
 var app = builder.Build();
 
 if (allowedOrigins.Length == 0)
@@ -175,6 +181,7 @@ app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSecond
 app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
 app.MapServerEndpoints();
 app.MapAuthEndpoints();
+app.MapFileEndpoints();
 app.MapWsEndpoints();
 
 app.Run();

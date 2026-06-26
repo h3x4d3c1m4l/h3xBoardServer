@@ -399,3 +399,9 @@ FodyWeavers.xsd
 
 # Database files
 *.db
+
+# Local file-storage backend (Storage:FileSystem:RootPath).
+# NOTE: do not use a bare "storage" — on case-insensitive filesystems (macOS/Windows)
+# it also matches the Storage/ source directory and silently un-tracks it.
+/storage-data/
+/storage-dev/

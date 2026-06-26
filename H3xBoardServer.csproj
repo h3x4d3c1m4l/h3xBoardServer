@@ -20,6 +20,9 @@
     <!-- Database access -->
     <PackageReference Include="linq2db" Version="6.3.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <!-- Pin the native SQLite bundle ahead of the 2.1.11 that Microsoft.Data.Sqlite pulls in
+         transitively: 2.1.11 has a high-severity advisory (GHSA-2m69-gcr7-jv3q); 3.0.x is patched. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
 
     <!-- Migrations -->
     <PackageReference Include="FluentMigrator" Version="8.0.1" />
