@@ -17,10 +17,12 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration configurati
         if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
             throw new AuthException(400, "Password must be at least 8 characters");
 
+        var email = NormalizeEmail(request.Email);
+
         await using var db = dbFactory.Create();
 
         var exists = await db.Users
-            .Where(u => u.Email == request.Email)
+            .Where(u => u.Email == email)
             .Take(1).AsAsyncEnumerable().AnyAsync();
 
         if (exists)
@@ -30,7 +32,7 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration configurati
         var user = new UserEntity
         {
             Id = Guid.NewGuid().ToString(),
-            Email = request.Email,
+            Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, workFactor: 12),
             FirstName = string.IsNullOrWhiteSpace(request.FirstName) ? null : request.FirstName.Trim(),
             LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName.Trim(),
@@ -50,10 +52,12 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration configurati
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             throw new AuthException(401, "Invalid credentials");
 
+        var email = NormalizeEmail(request.Email);
+
         await using var db = dbFactory.Create();
 
         var user = await db.Users
-            .Where(u => u.Email == request.Email)
+            .Where(u => u.Email == email)
             .Take(1).AsAsyncEnumerable().FirstOrDefaultAsync();
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
@@ -63,6 +67,8 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration configurati
 
         return new AuthResult(user.Id, user.Email, user.FirstName, user.LastName);
     }
+
+    private static string NormalizeEmail(string email) => email.ToLowerInvariant();
 
     private static void SetSession(HttpContext httpContext, UserEntity user)
     {
