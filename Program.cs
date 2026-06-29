@@ -182,6 +182,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime
 app.MapServerEndpoints();
 app.MapAuthEndpoints();
 app.MapFileEndpoints();
+app.MapBoardScreenshotEndpoints();
 app.MapWsEndpoints();
 
 app.Run();

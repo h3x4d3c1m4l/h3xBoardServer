@@ -67,7 +67,7 @@ public static class FileEndpoints
 
     // FileService throws LocalRpcException with HTTP-status-aligned RpcErrors codes (shared with the
     // WebSocket surface); map them back to HTTP status codes for the REST response.
-    private static int MapStatus(int errorCode) => errorCode switch
+    internal static int MapStatus(int errorCode) => errorCode switch
     {
         RpcErrors.CodeNotFound => StatusCodes.Status404NotFound,
         RpcErrors.CodeValidation => StatusCodes.Status400BadRequest,

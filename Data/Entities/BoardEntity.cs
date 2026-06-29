@@ -20,6 +20,14 @@ public class BoardEntity
     [Column("data"), NotNull]
     public string Data { get; set; } = "{}";
 
+    /// <summary>
+    /// Id of this board's screenshot in the <c>files</c> table (a <see cref="FileKind.BoardScreenshot"/>
+    /// file), or null if none has been uploaded yet. The bytes are managed out-of-band via
+    /// <c>/api/v1/boards/{id}/screenshot</c>; setting one does not touch <see cref="UpdatedAt"/>.
+    /// </summary>
+    [Column("screenshot_file_id")]
+    public string? ScreenshotFileId { get; set; }
+
     [Column("created_at"), NotNull]
     public DateTime CreatedAt { get; set; }
 

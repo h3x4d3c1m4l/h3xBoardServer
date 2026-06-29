@@ -1,6 +1,6 @@
 namespace H3xBoardServer.Services;
 
-public class BoardService(H3xBoardDbFactory dbFactory)
+public class BoardService(H3xBoardDbFactory dbFactory, FileService fileService)
 {
     public async Task<List<BoardSummary>> GetBoardsForUserAsync(string userId)
     {
@@ -8,7 +8,7 @@ public class BoardService(H3xBoardDbFactory dbFactory)
         return await db.Boards
             .Where(b => b.UserId == userId)
             .OrderByDescending(b => b.UpdatedAt)
-            .Select(b => new BoardSummary(b.Id, b.Title, b.CreatedAt, b.UpdatedAt))
+            .Select(b => new BoardSummary(b.Id, b.Title, b.ScreenshotFileId != null, b.CreatedAt, b.UpdatedAt))
             .ToListAsync();
     }
 
@@ -72,18 +72,22 @@ public class BoardService(H3xBoardDbFactory dbFactory)
     public async Task DeleteBoardAsync(string id, string userId)
     {
         await using var db = dbFactory.Create();
-        var deleted = await db.Boards
+        var board = await db.Boards
             .Where(b => b.Id == id && b.UserId == userId)
-            .DeleteAsync();
+            .Take(1).AsAsyncEnumerable().FirstOrDefaultAsync()
+            ?? throw RpcErrors.NotFound("Board not found");
 
-        if (deleted == 0)
-            throw RpcErrors.NotFound("Board not found");
+        // Cascade-delete the screenshot (bytes + row) before the board so we never orphan it.
+        if (board.ScreenshotFileId is not null)
+            await fileService.DeleteScreenshotAsync(board.ScreenshotFileId, userId);
+
+        await db.Boards.Where(b => b.Id == id).DeleteAsync();
     }
 
     private static BoardDto MapToDto(BoardEntity entity)
     {
         // Clone so the JsonElement owns its memory independent of the parsed document
         var data = JsonDocument.Parse(entity.Data).RootElement.Clone();
-        return new BoardDto(entity.Id, entity.Title, data, entity.CreatedAt, entity.UpdatedAt);
+        return new BoardDto(entity.Id, entity.Title, data, entity.ScreenshotFileId != null, entity.CreatedAt, entity.UpdatedAt);
     }
 }

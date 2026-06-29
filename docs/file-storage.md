@@ -47,8 +47,33 @@ no empty / `.` / `..` segments, no leading/trailing slash; `file_name` may not c
 sub-folder names under it — so a client can render a real folder tree. (Two files with the same
 `path` + `file_name` are allowed today; uniqueness is not enforced.)
 
-Board association is intentionally *not* modelled server-side: the Flutter client stores the returned
-`fileId` inside the board's opaque `data` blob.
+Board association is intentionally *not* modelled server-side for ordinary uploads: the Flutter client
+stores the returned `fileId` inside the board's opaque `data` blob. The one exception is **board
+screenshots** (below), which are a dedicated, server-managed file kind.
+
+## File kinds & board screenshots
+
+Every row carries a `kind` ([`FileKind`](../Data/Entities/FileKind.cs), stored as a readable string):
+
+- `user` — an ordinary upload. The **only** kind that appears in `files.v1.browse` and the only kind
+  `files.v1.delete` can address.
+- `board-screenshot` — a per-board screenshot, **hidden** from the generic file API.
+
+Browse and delete both filter to `kind = user`, so system files never leak into the user's own file
+listing and can't be deleted (or even named) through the generic endpoints.
+
+### Board screenshots
+
+The Flutter client renders a screenshot of a board (first sub-board today) and periodically uploads it,
+**independently of the board data save cycle**. The server stores it as a `board-screenshot` file linked
+1:1 from `boards.screenshot_file_id`:
+
+- Upload is an **upsert**: the first call creates the file and links it; later calls **overwrite the
+  bytes in place** (same id and storage key), so the periodic re-uploads never pile up orphans.
+- Setting a screenshot deliberately does **not** touch the board's `updated_at`, so it doesn't reorder
+  `boards.v1.list` ("most recently updated").
+- `BoardSummary`/`BoardDto` expose `hasScreenshot` so a client knows whether to fetch a thumbnail.
+- Deleting a board cascade-deletes its screenshot (bytes + row).
 
 ## Configuration
 
@@ -75,6 +100,7 @@ The API is split by payload type:
 | --- | --- | --- |
 | browse, delete | WebSocket JSON-RPC (`files.v1.browse` / `files.v1.delete`) | Metadata only — see [json-rpc-methods.md](json-rpc-methods.md) |
 | upload, download | REST (`POST` / `GET /api/v1/files`) | Binary streams natively over HTTP — no base64 bloat, no whole-file buffering |
+| board screenshot upload/download | REST (`PUT` / `GET /api/v1/boards/{id}/screenshot`) | Same binary-over-HTTP rationale; upsert keyed by board |
 
 Both transports share the same `.h3xboard.session` cookie for auth.
 
@@ -99,6 +125,20 @@ curl -b cookies.txt -OJ http://localhost:8081/api/v1/files/{id}
 
 Both require a valid session (`401` otherwise). `IFileStorage` is stream-based, so uploads stream
 straight to the backend and downloads stream straight from it.
+
+#### Board screenshot endpoints
+
+**`PUT /api/v1/boards/{boardId}/screenshot`** — `multipart/form-data` with a `file` part (the screenshot
+image). Upserts: replaces any existing screenshot for the board. Returns `200 OK` with the screenshot
+file's metadata. `404` if the board isn't owned by the caller; `400` for an empty/oversized file.
+
+```sh
+curl -b cookies.txt -X PUT -F "file=@board.png" \
+     http://localhost:8081/api/v1/boards/{boardId}/screenshot
+```
+
+**`GET /api/v1/boards/{boardId}/screenshot`** — streams the screenshot bytes. `404` if the board has no
+screenshot (or isn't owned by the caller).
 
 ## Adding a storage backend
 

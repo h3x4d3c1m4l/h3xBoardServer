@@ -23,8 +23,11 @@ All board methods require authentication.
 **boards.v1.list** response:
 
 ```json
-{ "result": [ { "id": "uuid", "title": "My Board", "createdAt": "...", "updatedAt": "..." } ] }
+{ "result": [ { "id": "uuid", "title": "My Board", "hasScreenshot": true, "createdAt": "...", "updatedAt": "..." } ] }
 ```
+
+`hasScreenshot` reports whether `GET /api/v1/boards/{id}/screenshot` will return an image (also present
+on `boards.v1.get`); see [file-storage.md](file-storage.md#board-screenshots).
 
 **boards.v1.get** request:
 

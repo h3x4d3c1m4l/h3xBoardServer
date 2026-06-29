@@ -35,6 +35,14 @@ public class FileEntity
     [Column("file_name"), NotNull]
     public string FileName { get; set; } = null!;
 
+    /// <summary>
+    /// What the file is. <see cref="FileKind.User"/> (the default) means an owner upload that shows up
+    /// in browse; system kinds (e.g. <see cref="FileKind.BoardScreenshot"/>) are hidden from the
+    /// generic file API. Stored as a string — see <see cref="FileKind"/>.
+    /// </summary>
+    [Column("kind"), NotNull]
+    public FileKind Kind { get; set; } = FileKind.User;
+
     [Column("content_type"), NotNull]
     public string ContentType { get; set; } = null!;
 
