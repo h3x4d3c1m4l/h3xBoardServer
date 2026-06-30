@@ -9,6 +9,7 @@ public class H3xBoardDb(DataOptions options) : LinqToDB.Data.DataConnection(opti
     public ITable<UserEntity> Users => this.GetTable<UserEntity>();
     public ITable<BoardEntity> Boards => this.GetTable<BoardEntity>();
     public ITable<FileEntity> Files => this.GetTable<FileEntity>();
+    public ITable<UserSettingEntity> UserSettings => this.GetTable<UserSettingEntity>();
 }
 
 /// <summary>

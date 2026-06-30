@@ -122,6 +122,9 @@ builder.Services.AddSingleton<IFileStorage, FileSystemFileStorage>();
 builder.Services.AddScoped<FileService>();
 builder.Services.AddScoped<FilesRpcV1>();
 
+builder.Services.AddScoped<SettingsService>();
+builder.Services.AddScoped<SettingsRpcV1>();
+
 var app = builder.Build();
 
 if (allowedOrigins.Length == 0)

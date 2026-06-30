@@ -57,6 +57,7 @@ public static class WsEndpoints
         using var jsonRpc = new JsonRpc(handler);
         jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<BoardsRpcV1>());
         jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<FilesRpcV1>());
+        jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<SettingsRpcV1>());
         if (env.IsDevelopment())
             jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<SystemRpcV1>());
         jsonRpc.StartListening();
