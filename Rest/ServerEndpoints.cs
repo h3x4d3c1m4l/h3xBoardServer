@@ -9,7 +9,10 @@ public static class ServerEndpoints
         {
             var registrationAllowed = configuration.GetValue("Auth:AllowRegistration", true);
             var maxUploadBytes = configuration.GetValue("Storage:MaxUploadBytes", 10L * 1024 * 1024);
-            return Results.Ok(new ServerInfo(registrationAllowed, maxUploadBytes));
+            var warning = configuration["Server:Warning"];
+            if (string.IsNullOrWhiteSpace(warning))
+                warning = null;
+            return Results.Ok(new ServerInfo(registrationAllowed, maxUploadBytes, warning));
         });
 
         return app;

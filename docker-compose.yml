@@ -14,6 +14,7 @@ services:
       # Session cookies require an explicit cross-origin allow-list (no wildcards):
       # Cors__AllowedOrigins__0: "https://your-client.example.com"
       # Auth__AllowRegistration: "false"
+      # Server__Warning: "This is a TEST environment — data may be wiped at any time."
     volumes:
       - h3xboard-data:/data
     depends_on:
