@@ -33,4 +33,17 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.1" />
   </ItemGroup>
 
+  <!-- The test project lives in a subfolder of this (root-level) project, so keep its sources and
+       assets out of the web project's default globs. -->
+  <ItemGroup>
+    <Compile Remove="H3xBoardServer.Tests/**" />
+    <Content Remove="H3xBoardServer.Tests/**" />
+    <None Remove="H3xBoardServer.Tests/**" />
+    <EmbeddedResource Remove="H3xBoardServer.Tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="H3xBoardServer.Tests" />
+  </ItemGroup>
+
 </Project>

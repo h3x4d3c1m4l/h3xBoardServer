@@ -125,13 +125,36 @@ builder.Services.AddScoped<FilesRpcV1>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<SettingsRpcV1>();
 
+// Live board sharing — session state and fan-out go through Redis when configured, so share
+// sessions work across instances and survive restarts (within their TTL). The in-process
+// fallbacks are for local dev only; see the startup warning below and docs/live-sharing.md.
+if (!string.IsNullOrWhiteSpace(redisConnStr))
+{
+    builder.Services.AddSingleton<IShareStore, RedisShareStore>();
+    builder.Services.AddSingleton<IShareBus, RedisShareBus>();
+}
+else
+{
+    builder.Services.AddSingleton<IShareStore, InMemoryShareStore>();
+    builder.Services.AddSingleton<IShareBus, InMemoryShareBus>();
+}
+builder.Services.AddSingleton<ViewerRegistry>();
+builder.Services.AddSingleton<ShareCodeRateLimiter>();
+builder.Services.AddScoped<RpcConnection>();
+builder.Services.AddScoped<PresenterNotifier>();
+builder.Services.AddScoped<ShareSessionService>();
+builder.Services.AddScoped<SharingRpcV1>();
+
 var app = builder.Build();
 
 if (allowedOrigins.Length == 0)
     app.Logger.LogWarning("Cors:AllowedOrigins is empty — cross-origin requests will be rejected. Add allowed origins to appsettings.");
 
 if (string.IsNullOrWhiteSpace(redisConnStr))
+{
     app.Logger.LogWarning("Redis:ConnectionString is empty — using in-process session cache and filesystem DataProtection keys. This is single-instance only; sessions and keys do not survive a container restart. Set Redis:ConnectionString (e.g. a Dragonfly instance) for production.");
+    app.Logger.LogWarning("Redis:ConnectionString is empty — live board sharing is using in-process session state and fan-out. This is single-instance only; share sessions do not survive a restart and viewers on other instances will not receive frames. Set Redis:ConnectionString (e.g. a Dragonfly instance) for production.");
+}
 
 // ////////////// //
 // Run Migrations //
@@ -186,6 +209,8 @@ app.MapServerEndpoints();
 app.MapAuthEndpoints();
 app.MapFileEndpoints();
 app.MapBoardScreenshotEndpoints();
+app.MapViewFileEndpoints();
 app.MapWsEndpoints();
+app.MapViewWsEndpoints();
 
 app.Run();

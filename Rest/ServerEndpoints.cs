@@ -12,7 +12,10 @@ public static class ServerEndpoints
             var warning = configuration["Server:Warning"];
             if (string.IsNullOrWhiteSpace(warning))
                 warning = null;
-            return Results.Ok(new ServerInfo(registrationAllowed, maxUploadBytes, warning));
+            var webAppUrl = configuration["Server:WebAppUrl"];
+            if (string.IsNullOrWhiteSpace(webAppUrl))
+                webAppUrl = null;
+            return Results.Ok(new ServerInfo(registrationAllowed, maxUploadBytes, warning, webAppUrl));
         });
 
         return app;

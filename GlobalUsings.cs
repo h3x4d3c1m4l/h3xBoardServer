@@ -7,4 +7,5 @@ global using H3xBoardServer.Data.Entities;
 global using H3xBoardServer.Rpc;
 global using H3xBoardServer.Rpc.Dtos;
 global using H3xBoardServer.Services;
+global using H3xBoardServer.Services.Sharing;
 global using H3xBoardServer.Storage;

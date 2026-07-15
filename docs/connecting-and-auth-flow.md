@@ -11,7 +11,7 @@ GET /api/v1/server/info
 Returns `200` with a small, unauthenticated capabilities object that clients can read before logging in:
 
 ```json
-{ "registrationAllowed": true, "maxUploadBytes": 10485760, "warning": null }
+{ "registrationAllowed": true, "maxUploadBytes": 10485760, "warning": null, "webAppUrl": null }
 ```
 
 This object is intended to grow over time. The fields are:
@@ -19,6 +19,7 @@ This object is intended to grow over time. The fields are:
 - `registrationAllowed` — whether the server accepts new registrations; clients should hide or disable their sign-up UI when it is `false`.
 - `maxUploadBytes` — the maximum file upload size in bytes, so clients can validate before sending.
 - `warning` — an optional server-wide banner message (`null` when unset). When non-null, clients should surface it prominently in their UI — e.g. to flag a testing-only environment where data loss may occur. Configured server-side via `Server:Warning` (empty/whitespace ⇒ `null`).
+- `webAppUrl` — the public URL of the web viewer app (`null` when unset), used by the board app to build shareable live-sharing links (see [live-sharing.md](live-sharing.md)). Configured server-side via `Server:WebAppUrl` (empty/whitespace ⇒ `null`).
 
 ## Step 1 — Register or log in (REST)
 

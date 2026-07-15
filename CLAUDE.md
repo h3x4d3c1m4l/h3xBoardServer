@@ -8,9 +8,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 dotnet build
 dotnet run
 dotnet run --environment Development   # uses h3xboard-dev.db
+dotnet test H3xBoardServer.Tests/H3xBoardServer.Tests.csproj   # unit tests (xUnit)
 ```
 
-There are no automated tests yet. There is no linter configured beyond the IDE.
+Tests live in `H3xBoardServer.Tests/` (a subfolder of the root-level web project — the main csproj
+excludes it from its default globs, keep that in place). Run `dotnet build` / `dotnet test` with an
+explicit csproj argument when both matter; a bare `dotnet build` at the root builds only the server.
+There is no linter configured beyond the IDE.
 
 ### Docker
 
@@ -41,10 +45,18 @@ REST /api/v1/boards/{id}/screenshot
 
 WebSocket /ws/v1     →  Program.cs (session auth gate — 401 if no valid session)
                      →  JsonRpc (StreamJsonRpc, SystemTextJsonFormatter, camelCase)
-                     →  BoardsRpcV1 / FilesRpcV1 / SettingsRpcV1   (RPC target classes)
-                     →  BoardService / FileService / SettingsService (business logic)
+                     →  BoardsRpcV1 / FilesRpcV1 / SettingsRpcV1 / SharingRpcV1   (RPC target classes)
+                     →  BoardService / FileService / SettingsService / ShareSessionService (business logic)
                      →  H3xBoardDbFactory.Create() → H3xBoardDb (linq2db DataConnection)  +  IFileStorage (file bytes)
                      →  SQLite
+
+WebSocket /ws/v1/view/{code}
+                     →  Rpc/ViewWsEndpoints.cs (anonymous — share code is the credential; plain JSON, not JSON-RPC)
+                     →  ViewerRegistry (local fan-out) ← IShareBus (Redis pub/sub)  +  IShareStore (session/presence)
+
+REST /api/v1/view/{code}/files/{fileId}
+                     →  Rest/ViewFileEndpoints.cs (anonymous; fileId must be in the session snapshot's fileIds)
+                     →  FileService (owner-scoped, as the presenter)  +  IFileStorage
 ```
 
 Migrations run automatically at startup via `IMigrationRunner.MigrateUp()`.

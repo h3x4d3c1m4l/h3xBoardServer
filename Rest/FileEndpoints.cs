@@ -70,6 +70,8 @@ public static class FileEndpoints
     internal static int MapStatus(int errorCode) => errorCode switch
     {
         RpcErrors.CodeNotFound => StatusCodes.Status404NotFound,
+        RpcErrors.CodeConflict => StatusCodes.Status409Conflict,
+        RpcErrors.CodePayloadTooLarge => StatusCodes.Status413PayloadTooLarge,
         RpcErrors.CodeValidation => StatusCodes.Status400BadRequest,
         _ => StatusCodes.Status500InternalServerError,
     };

@@ -55,9 +55,14 @@ public static class WsEndpoints
         var handler = new WebSocketMessageHandler(webSocket, formatter);
 
         using var jsonRpc = new JsonRpc(handler);
+        // Expose the JsonRpc instance to scoped services (e.g. the live-sharing PresenterNotifier)
+        // so they can push server→client notifications on this connection.
+        var connection = sp.GetRequiredService<RpcConnection>();
+        connection.JsonRpc = jsonRpc;
         jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<BoardsRpcV1>());
         jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<FilesRpcV1>());
         jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<SettingsRpcV1>());
+        jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<SharingRpcV1>());
         if (env.IsDevelopment())
             jsonRpc.AddLocalRpcTarget(sp.GetRequiredService<SystemRpcV1>());
         jsonRpc.StartListening();
@@ -69,6 +74,19 @@ public static class WsEndpoints
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "WebSocket error for {Ip}", remoteIp);
+        }
+        finally
+        {
+            // Pause any live share session so the presenter can resume within the TTL grace window.
+            connection.JsonRpc = null;  // the connection is gone — don't attempt notifications
+            try
+            {
+                await sp.GetRequiredService<ShareSessionService>().OnPresenterDisconnectedAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to pause share session on disconnect for {Ip}", remoteIp);
+            }
         }
 
         logger.LogInformation("WebSocket disconnected from {Ip}", remoteIp);
