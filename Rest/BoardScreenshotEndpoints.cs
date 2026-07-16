@@ -18,6 +18,7 @@ public static class BoardScreenshotEndpoints
         // screenshot for the board. Returns the screenshot file's metadata.
         app.MapPut("/api/v1/boards/{boardId}/screenshot", async (string boardId, HttpContext httpContext, FileService fileService) =>
         {
+            await httpContext.Session.LoadAsync();
             var userId = httpContext.Session.GetString("userId");
             if (userId is null)
                 return Results.Unauthorized();
@@ -47,6 +48,7 @@ public static class BoardScreenshotEndpoints
         // Download — streams the screenshot bytes with their content type. 404 if the board has none.
         app.MapGet("/api/v1/boards/{boardId}/screenshot", async (string boardId, HttpContext httpContext, FileService fileService) =>
         {
+            await httpContext.Session.LoadAsync();
             var userId = httpContext.Session.GetString("userId");
             if (userId is null)
                 return Results.Unauthorized();

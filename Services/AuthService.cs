@@ -42,6 +42,7 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration configurati
 
         await db.InsertAsync(user);
 
+        await httpContext.Session.LoadAsync();
         SetSession(httpContext, user);
 
         return new AuthResult(user.Id, user.Email, user.FirstName, user.LastName);
@@ -63,6 +64,7 @@ public class AuthService(H3xBoardDbFactory dbFactory, IConfiguration configurati
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new AuthException(401, "Invalid credentials");
 
+        await httpContext.Session.LoadAsync();
         SetSession(httpContext, user);
 
         return new AuthResult(user.Id, user.Email, user.FirstName, user.LastName);

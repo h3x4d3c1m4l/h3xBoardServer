@@ -16,6 +16,7 @@ public static class FileEndpoints
         // destination virtual folder, "" = root). Returns the new file's metadata.
         app.MapPost("/api/v1/files", async (HttpContext httpContext, FileService fileService) =>
         {
+            await httpContext.Session.LoadAsync();
             var userId = httpContext.Session.GetString("userId");
             if (userId is null)
                 return Results.Unauthorized();
@@ -46,6 +47,7 @@ public static class FileEndpoints
         // Download — streams the bytes with the original filename and content type.
         app.MapGet("/api/v1/files/{id}", async (string id, HttpContext httpContext, FileService fileService) =>
         {
+            await httpContext.Session.LoadAsync();
             var userId = httpContext.Session.GetString("userId");
             if (userId is null)
                 return Results.Unauthorized();

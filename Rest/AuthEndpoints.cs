@@ -30,14 +30,16 @@ public static class AuthEndpoints
             }
         });
 
-        app.MapPost("/api/v1/auth/logout", (HttpContext httpContext) =>
+        app.MapPost("/api/v1/auth/logout", async (HttpContext httpContext) =>
         {
+            await httpContext.Session.LoadAsync();
             httpContext.Session.Clear();
             return Results.NoContent();
         });
 
-        app.MapGet("/api/v1/auth/whoami", (HttpContext httpContext) =>
+        app.MapGet("/api/v1/auth/whoami", async (HttpContext httpContext) =>
         {
+            await httpContext.Session.LoadAsync();
             var userId = httpContext.Session.GetString("userId");
             var email = httpContext.Session.GetString("email");
             var firstName = httpContext.Session.GetString("firstName");
