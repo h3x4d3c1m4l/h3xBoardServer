@@ -48,7 +48,7 @@ public static class WsEndpoints
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase), new UtcDateTimeConverter() },
         };
 
         var formatter = new SystemTextJsonFormatter { JsonSerializerOptions = jsonOptions };
