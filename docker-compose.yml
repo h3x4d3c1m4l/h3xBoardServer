@@ -15,6 +15,8 @@ services:
       # Cors__AllowedOrigins__0: "https://your-client.example.com"
       # Auth__AllowRegistration: "false"
       # Server__Warning: "This is a TEST environment — data may be wiped at any time."
+      # Sentry error tracking (unset/empty Dsn disables it entirely):
+      # Sentry__Dsn: "https://examplePublicKey@o0.ingest.sentry.io/0"
     volumes:
       - h3xboard-data:/data
     depends_on:

@@ -13,6 +13,9 @@
     <!-- JSON-RPC over WebSockets -->
     <PackageReference Include="StreamJsonRpc" Version="2.25.29" />
 
+    <!-- Error tracking / performance monitoring -->
+    <PackageReference Include="Sentry.AspNetCore" Version="6.7.0" />
+
     <!-- Redis/Dragonfly: distributed session cache + DataProtection key ring -->
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.9" />

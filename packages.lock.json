@@ -81,6 +81,15 @@
           "StackExchange.Redis": "2.7.27"
         }
       },
+      "Sentry.AspNetCore": {
+        "type": "Direct",
+        "requested": "[6.7.0, )",
+        "resolved": "6.7.0",
+        "contentHash": "UMOA1gqotTxN+PscTjw5Ez0VZHFhDX3DhgLYqlXPzeug9NcaFTMUDbM4npXlT1YFk2WhGOXSmpozTMWElUIcrg==",
+        "dependencies": {
+          "Sentry.Extensions.Logging": "6.7.0"
+        }
+      },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Direct",
         "requested": "[3.0.3, )",
@@ -453,6 +462,19 @@
         "type": "Transitive",
         "resolved": "1.3.1",
         "contentHash": "GFdJvsN/VczpP0GfdPIi0jDudGH2Emk3rcIJHdqwU2SL2zQm1xSl6OTYvQSUxvzHu3ClWo096ICdWXVkpifQUA=="
+      },
+      "Sentry": {
+        "type": "Transitive",
+        "resolved": "6.7.0",
+        "contentHash": "fE8rXrzo1xZrKYtvSxDcww7ZLJbB4t+pZK748zrS5ctFo4L0sNNEkRDkJ6smSGwe0kpDRBQn4bQHPrvUOmzUaA=="
+      },
+      "Sentry.Extensions.Logging": {
+        "type": "Transitive",
+        "resolved": "6.7.0",
+        "contentHash": "DO2PSOsd5BeXwdBV8mGr6GomNiFX5t7Si9MapjHfEspbVZyObjdoUKNdPg8EmCrVwiGN92eSBiDNOzGKeUiv2Q==",
+        "dependencies": {
+          "Sentry": "6.7.0"
+        }
       },
       "SourceGear.sqlite3": {
         "type": "Transitive",

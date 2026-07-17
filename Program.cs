@@ -6,6 +6,15 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ////// //
+// Sentry //
+// ////// //
+
+// Configured entirely from the "Sentry" section in appsettings (Dsn, TracesSampleRate, etc.) —
+// see https://docs.sentry.io/platforms/dotnet/guides/aspnetcore/configuration/options/. When
+// Sentry:Dsn is empty (the default), the SDK disables itself and this is a no-op.
+builder.WebHost.UseSentry();
+
 // //////// //
 // Database //
 // //////// //
